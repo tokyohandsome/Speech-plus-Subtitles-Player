@@ -42,16 +42,40 @@ def create_subtitles(file):
 def main(page: ft.Page):
     page.isPlaying = False
     page.position = 0
-    page.scroll = "adaptive"
+    page.subtitles = ''
+    #page.scroll = "adaptive"
 
+    '''
+    # Page theme copied from Scrolling column programmatically page
+    page.theme = ft.Theme(
+        scrollbar_theme=ft.ScrollbarTheme(
+            track_color={
+                ft.MaterialState.HOVERED: ft.colors.AMBER,
+                ft.MaterialState.DEFAULT: ft.colors.TRANSPARENT,
+            },
+            track_visibility=True,
+            track_border_color=ft.colors.BLUE,
+            thumb_visibility=True,
+            thumb_color={
+                ft.MaterialState.HOVERED: ft.colors.RED,
+                ft.MaterialState.DEFAULT: ft.colors.GREY_300,
+            },
+            thickness=30,
+            radius=15,
+            main_axis_margin=5,
+            cross_axis_margin=10,
+            # interactive=False,
+        )
+    )
+    '''
     def loaded(e):
         print("Loaded")
         audio_slider.max = audio1.get_duration()
         #audio_slider.label = audio1.get_current_position()
         print("Duration:", audio_slider.max)
         audio_slider.divisions = audio_slider.max//60
-        subtitles = create_subtitles("assets/"+srt_dir+srt_file)
-        print(subtitles)
+        page.subtitles = create_subtitles("assets/"+srt_dir+srt_file)
+        print(page.subtitles)
         page.update()
 
     def position_changed(e):
@@ -82,6 +106,16 @@ def main(page: ft.Page):
             play_button.text = "Paused"
         page.update()
 
+    def add_list(e):
+        print("Adding list items.")
+        for i in range(len(page.subtitles)):
+            #print(page.subtitles[i])
+            #key_num = int(page.subtitles[i][0])
+            start_time = page.subtitles[i][1]
+            text = page.subtitles[i][2]
+            cl.controls.append(ft.Text(f"[{start_time}] {text}"))
+        page.update()
+
     audio1 = ft.Audio(
         src=audio_dir+audio_file,
         #autoplay = True,
@@ -109,11 +143,22 @@ def main(page: ft.Page):
     )
 
     position_duration = ft.Row([
-        ft.Text(value=audio_slider.value, text_align=ft.TextAlign.LEFT),
-        ft.Text(value=audio_slider.max, text_align=ft.TextAlign.RIGHT),
+        ft.Text(value=audio_slider.value, 
+                #text_align=ft.TextAlign.LEFT
+                ),
+        ft.Text(value=audio_slider.max, 
+                #text_align=ft.TextAlign.RIGHT
+                ),
     ], #alignment=ft.MainAxisAlignment.SPACE_EVENLY,
     )
     
+    cl = ft.Column(
+        spacing = 10,
+        height = 200,
+        width = float("inf"),
+        scroll = ft.ScrollMode.ALWAYS,
+    )
+        
     page.add(
         ft.Text(value=f"Base Directories: assets/audio and assets/text"),
         ft.Text(value=f"Audio File: {audio_file}"),
@@ -126,7 +171,9 @@ def main(page: ft.Page):
                 "Get current position",
                 on_click=lambda _: print("Current position:", audio1.get_current_position()),
             )
-            ])
+            ]),
+        ft.Container(cl, border=ft.border.all(1)),
+        ft.TextButton(text="import list", on_click=add_list),
         ),
     
 
