@@ -41,30 +41,54 @@ def create_subtitles(file):
 def main(page: ft.Page):
     page.isPlaying = False
     page.position = 0
+    page.duration = 0
     page.subtitles = ''
     #page.scroll = "adaptive"
 
     def loaded(e):
         print("Loaded")
         audio_slider.max = audio1.get_duration()
-        #audio_slider.label = audio1.get_current_position()
-        print("Duration:", audio_slider.max)
+        duration_text.value = audio_slider.max
+        print("audio_slider.max:", audio_slider.max)
         audio_slider.divisions = audio_slider.max//60
         page.subtitles = create_subtitles("assets/"+srt_dir+srt_file)
-        print(page.subtitles)
+        #print(page.subtitles)
 
-        # Show subtitles
-        print("Adding list items.")
+        # Extract subtitles as buttons
+        print("Extract subtitles as buttons.")
         for i in range(len(page.subtitles)):
+            key_num = page.subtitles[i][0]
             start_time = page.subtitles[i][1]
             text = page.subtitles[i][2]
-            cl.controls.append(ft.FilledButton(text=(f"[{start_time}] {text}")))
-        
+            cl.controls.append(
+                ft.TextButton(
+                #ft.Container(
+                        content=ft.Text(f"[{start_time}] {text}"),
+                        #bgcolor=ft.colors.CYAN_200,
+                        #padding = 10,
+                        #adaptive = True,
+                        #width = float("inf"),
+                        #on_click=jump(start_time),
+                        key=key_num,
+                        #on_long_press=jump(key_num, start_time),
+                        #ink = True,
+                        on_click=jump(key_num, start_time),
+                ), 
+            )
+        page.update()
+
+    def jump(key, start):
+        #jump_to = str(int(e.data))
+        #audio_slider.value = jump_to
+        #print("Jump to:", e)
+        print(f"Key: {key}, Start: {start}")
+        #print("Button cliecked")
         page.update()
 
     def position_changed(e):
         audio_slider.value = e.data
         print("Position:", audio_slider.value)
+        position_text.value = e.data
         page.update()
 
     def slider_changed(e):
@@ -89,20 +113,13 @@ def main(page: ft.Page):
             page.isPlaying = False
             play_button.text = "Paused"
         page.update()
-
-    audio1 = ft.Audio(
-        src=audio_dir+audio_file,
-        #autoplay = True,
-        volume=1,
-        balance=0,
-        on_loaded=loaded,
-        on_position_changed = position_changed,
-        #on_state_changed=lambda e: isPlaying=e.data,
-        #on_state_changed=play_button_clicked,
-        on_seek_complete=lambda _: print("Seek complete"),
-    )
-    page.overlay.append(audio1)
     
+    def playback_completed(e):
+        if e.data == "completed":
+            page.isPlaying = False 
+            play_button.text = "Play"
+        page.update()
+
     audio_slider = ft.Slider(
         min = 0,
         value = int(page.position/10000),
@@ -117,29 +134,40 @@ def main(page: ft.Page):
         on_click=play_button_clicked
     )
 
-    position_duration = ft.Row([
-        ft.Text(value=audio_slider.value, 
-                #text_align=ft.TextAlign.LEFT
-                ),
-        ft.Text(value=audio_slider.max, 
-                #text_align=ft.TextAlign.RIGHT
-                ),
-    ], #alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-    )
+    position_text = ft.Text(value=audio_slider.value)
+    duration_text = ft.Text(value=page.duration)
     
     cl = ft.Column(
         spacing = 10,
-        height = 500,
         width = float("inf"),
+        alignment = ft.CrossAxisAlignment.START,
         scroll = ft.ScrollMode.ALWAYS,
     )
-        
+    
+    audio1 = ft.Audio(
+        src=audio_dir+audio_file,
+        #autoplay = True,
+        volume=1,
+        balance=0,
+        on_loaded=loaded,
+        on_position_changed = position_changed,
+        #on_state_changed=lambda e: isPlaying=e.data,
+        on_state_changed = playback_completed,
+        #on_state_changed=play_button_clicked,
+        on_seek_complete=lambda _: print("Seek complete"),
+    )
+    page.overlay.append(audio1)        
+
     page.add(
         ft.Text(value=f"Base Directories: assets/audio and assets/text"),
         ft.Text(value=f"Audio File: {audio_file}"),
         ft.Text(value=f"Text File: {srt_file}"),
         audio_slider,
-        position_duration,
+        ft.Row([
+            ft.Text(value="0"),
+            position_text,
+            duration_text,
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
         ft.Row([
             play_button,
             ft.ElevatedButton(
@@ -147,8 +175,9 @@ def main(page: ft.Page):
                 on_click=lambda _: print("Current position:", audio1.get_current_position()),
             )
             ]),
-        ft.Container(cl, border=ft.border.all(1)),
-        #ft.TextButton(text="import list", on_click=add_list),
+        ft.Container(cl, border=ft.border.all(1), 
+                     expand=True
+                     ),
         ),
     
 
