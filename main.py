@@ -6,11 +6,10 @@ import flet as ft
 import os
 import re
 
-url = "https://github.com/mdn/webaudio-examples/blob/main/audio-analyser/viper.mp3?raw=true"
 audio_dir= "audio/"
-#audio_file = "Ochiai.mp3"
+audio_file = "Ochiai.mp3"
 #audio_file = "YoroTakeshi.m4a"
-audio_file = "YoroTakeshi.m4a"
+#audio_file = "YoroTakeshi.m4a"
 srt_dir = "text/"
 srt_file = os.path.splitext(os.path.basename(audio_file))[0]+".txt"
 print(srt_dir+srt_file)
@@ -45,29 +44,6 @@ def main(page: ft.Page):
     page.subtitles = ''
     #page.scroll = "adaptive"
 
-    '''
-    # Page theme copied from Scrolling column programmatically page
-    page.theme = ft.Theme(
-        scrollbar_theme=ft.ScrollbarTheme(
-            track_color={
-                ft.MaterialState.HOVERED: ft.colors.AMBER,
-                ft.MaterialState.DEFAULT: ft.colors.TRANSPARENT,
-            },
-            track_visibility=True,
-            track_border_color=ft.colors.BLUE,
-            thumb_visibility=True,
-            thumb_color={
-                ft.MaterialState.HOVERED: ft.colors.RED,
-                ft.MaterialState.DEFAULT: ft.colors.GREY_300,
-            },
-            thickness=30,
-            radius=15,
-            main_axis_margin=5,
-            cross_axis_margin=10,
-            # interactive=False,
-        )
-    )
-    '''
     def loaded(e):
         print("Loaded")
         audio_slider.max = audio1.get_duration()
@@ -76,6 +52,14 @@ def main(page: ft.Page):
         audio_slider.divisions = audio_slider.max//60
         page.subtitles = create_subtitles("assets/"+srt_dir+srt_file)
         print(page.subtitles)
+
+        # Show subtitles
+        print("Adding list items.")
+        for i in range(len(page.subtitles)):
+            start_time = page.subtitles[i][1]
+            text = page.subtitles[i][2]
+            cl.controls.append(ft.FilledButton(text=(f"[{start_time}] {text}")))
+        
         page.update()
 
     def position_changed(e):
@@ -106,16 +90,6 @@ def main(page: ft.Page):
             play_button.text = "Paused"
         page.update()
 
-    def add_list(e):
-        print("Adding list items.")
-        for i in range(len(page.subtitles)):
-            #print(page.subtitles[i])
-            #key_num = int(page.subtitles[i][0])
-            start_time = page.subtitles[i][1]
-            text = page.subtitles[i][2]
-            cl.controls.append(ft.Text(f"[{start_time}] {text}"))
-        page.update()
-
     audio1 = ft.Audio(
         src=audio_dir+audio_file,
         #autoplay = True,
@@ -138,6 +112,7 @@ def main(page: ft.Page):
 
     play_button = ft.ElevatedButton(
         text = "Play",
+        autofocus=True,
         #on_click=play_button_clicked(isPlaying)
         on_click=play_button_clicked
     )
@@ -154,7 +129,7 @@ def main(page: ft.Page):
     
     cl = ft.Column(
         spacing = 10,
-        height = 200,
+        height = 500,
         width = float("inf"),
         scroll = ft.ScrollMode.ALWAYS,
     )
@@ -173,7 +148,7 @@ def main(page: ft.Page):
             )
             ]),
         ft.Container(cl, border=ft.border.all(1)),
-        ft.TextButton(text="import list", on_click=add_list),
+        #ft.TextButton(text="import list", on_click=add_list),
         ),
     
 
