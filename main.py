@@ -7,8 +7,8 @@ import os
 import re
 
 audio_dir= "audio/"
-audio_file = "Ren-ai.m4a"
-#audio_file = "YoroTakeshi.m4a"
+#audio_file = "Ren-ai.m4a"
+audio_file = "Ochiai.mp3"
 #audio_file = "YoroTakeshi.m4a"
 srt_dir = "text/"
 srt_file = os.path.splitext(os.path.basename(audio_file))[0]+".txt"
@@ -40,16 +40,21 @@ def create_subtitles(file):
     return(subs)
 
 class SubButton(ft.UserControl):
-    def __init__(self, index, start, text):
+    def __init__(self, index, start_time, text, sub_time_clicked):
         super().__init__()
         self.index = index
-        self.start = start
+        self.start_time = start_time
         self.text = text
+        self.sub_time_clicked = sub_time_clicked
         #self.main = main()
     
     def build(self):
-        self.display_start = ft.Text(f"{self.start} (ms)")
-        self.display_text= ft.TextButton(text=f"{self.text}", on_click=self.edit_clicked, tooltip='Click to edit')
+        self.display_start_time = ft.TextButton(text=f"{self.start_time} (ms)",
+                                           tooltip="Click to jump",
+                                           on_click=self.jump_clicked,)
+        self.display_text= ft.TextButton(text=f"{self.text}", 
+                                         on_click=self.edit_clicked, 
+                                         tooltip='Click to edit')
         self.edit_text = ft.TextField(expand=1)
 
         self.display_view = ft.Row(
@@ -57,7 +62,7 @@ class SubButton(ft.UserControl):
             alignment=ft.MainAxisAlignment.START,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                self.display_start,
+                self.display_start_time,
                 self.display_text,
                 #ft.Row(spacing=0, controls=[ft.IconButton(ft.icons.PLAY_ARROW_OUTLINED,)])
             ]
@@ -86,7 +91,6 @@ class SubButton(ft.UserControl):
         self.edit_text.value = self.display_text.text
         self.display_view.visible = False
         self.edit_view.visible = True
-        #self.main.play_button_clicked()
         self.update()
 
     def save_clicked(self, e):
@@ -101,7 +105,7 @@ class SubButton(ft.UserControl):
         self.update()
 
     def jump_clicked(self, e):
-        pass
+        self.sub_time_clicked(self.start_time)
 
 class AudioSubPlayer(ft.UserControl):
     def __init__(self):
@@ -152,14 +156,14 @@ class AudioSubPlayer(ft.UserControl):
         )
 
     def loaded(self, e):
-        print("Loaded")
+        #print("Loaded")
         self.audio_slider.max = self.audio1.get_duration()
         self.duration_text.value = self.audio_slider.max
-        print("audio_slider.max:", self.audio_slider.max)
+        #print("audio_slider.max:", self.audio_slider.max)
         self.audio_slider.divisions = self.audio_slider.max//60
         self.subtitles = create_subtitles("assets/"+srt_dir+srt_file)
         print(self.subtitles)
-        print(type(self.subtitles))
+        #print(type(self.subtitles))
 
         # Extract subtitles as buttons
         print("Extract subtitles as buttons.")
@@ -167,8 +171,9 @@ class AudioSubPlayer(ft.UserControl):
             index = self.subtitles[i][0]
             start_time = self.subtitles[i][1]
             text = self.subtitles[i][2]
+            sub_time = ''
             # Create instance
-            sub = SubButton(index, start_time, text)
+            sub = SubButton(index, start_time, text, self.sub_time_clicked)
             self.subs_view.controls.append(sub)
         self.update()
 
@@ -218,6 +223,10 @@ class AudioSubPlayer(ft.UserControl):
         self.audio1.seek(int(self.audio_slider.value))
         print(int(self.audio_slider.value))
         self.update()
+
+    def sub_time_clicked(self, start_time):
+        self.audio1.seek(int(start_time))
+        self.update
 
     # *** BUILD METHOD ***
     def build(self):
