@@ -60,7 +60,7 @@ class SubButton(ft.UserControl):
         self.display_view = ft.Row(
             #alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             alignment=ft.MainAxisAlignment.START,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            #vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 self.display_start_time,
                 self.display_text,
@@ -89,8 +89,10 @@ class SubButton(ft.UserControl):
 
     def edit_clicked(self, e):
         self.edit_text.value = self.display_text.text
+        self.edit_text.focus()
         self.display_view.visible = False
         self.edit_view.visible = True
+        self.edit_text.on_submit = self.save_clicked
         self.update()
 
     def save_clicked(self, e):
@@ -136,7 +138,8 @@ class AudioSubPlayer(ft.UserControl):
             height= 300,
             #expand=True,
             width = float("inf"),
-            scroll = ft.ScrollMode.ALWAYS,
+            #scroll = ft.ScrollMode.ALWAYS,
+            scroll = ft.ScrollMode.AUTO,
         )
         
         self.rewind_button = ft.ElevatedButton(
@@ -230,7 +233,7 @@ class AudioSubPlayer(ft.UserControl):
 
     # *** BUILD METHOD ***
     def build(self):
-        self.view = ft.Container(content=ft.Column([
+        self.view = ft.Column(controls=[
                 ft.Text(value=f"Base Directories: assets/audio and assets/text"),
                 ft.Text(value=f"Audio File: {audio_file}"),
                 ft.Text(value=f"Text File: {srt_file}"),
@@ -248,13 +251,9 @@ class AudioSubPlayer(ft.UserControl):
                         on_click=lambda _: print("Current position:", self.audio1.get_current_position()),
                     )
                     ]),
-                    ft.Container(self.subs_view, 
-                                 border=ft.border.all(1), 
-                                 #expand=False, 
-                                 ),
-                ],
-            ),
-        )
+            self.subs_view,
+            ],
+            )
         return self.view
 
 def main(page: ft.Page):
