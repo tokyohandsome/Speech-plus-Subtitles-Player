@@ -135,11 +135,10 @@ class AudioSubPlayer(ft.UserControl):
         
         self.subs_view = ft.Column(
             spacing = 5,
-            height= 300,
+            height= 500,
             #expand=True,
             width = float("inf"),
-            #scroll = ft.ScrollMode.ALWAYS,
-            scroll = ft.ScrollMode.AUTO,
+            scroll = ft.ScrollMode.ALWAYS,
         )
         
         self.rewind_button = ft.ElevatedButton(
@@ -230,34 +229,53 @@ class AudioSubPlayer(ft.UserControl):
     def sub_time_clicked(self, start_time):
         self.audio1.seek(int(start_time))
         self.update
+    
+    def scroll_to(self):
+       self.subs_view
+    
+    def scroll_to(self):
+        self.subs_view.scroll_to() 
 
     # *** BUILD METHOD ***
     def build(self):
-        self.view = ft.Column(controls=[
-                ft.Text(value=f"Base Directories: assets/audio and assets/text"),
-                ft.Text(value=f"Audio File: {audio_file}"),
-                ft.Text(value=f"Text File: {srt_file}"),
-                self.audio_slider,
-                ft.Row([
-                    ft.Text(value="0"),
-                    self.position_text,
-                    self.duration_text,
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                ft.Row(controls=[
-                    self.rewind_button,
-                    self.play_button,
-                    ft.ElevatedButton(
-                        "Get current position",
-                        on_click=lambda _: print("Current position:", self.audio1.get_current_position()),
-                    )
+        self.view = ft.Column(expand=True, controls=[
+            ft.Container(content=
+                ft.Column(controls=[
+                    ft.Text(value=f"Base Directories: assets/audio and assets/text"),
+                    ft.Text(value=f"Audio File: {audio_file}"),
+                    ft.Text(value=f"Text File: {srt_file}"),
+                    self.audio_slider,
+                    ft.Row([
+                        ft.Text(value="0"),
+                        self.position_text,
+                        self.duration_text,
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    ft.Row(controls=[
+                        self.rewind_button,
+                        self.play_button,
+                        ft.ElevatedButton(
+                            "Get current position",
+                            on_click=lambda _: print("Current position:", self.audio1.get_current_position()),
+                        )
                     ]),
-            self.subs_view,
-            ],
+                ]), expand=False, border_radius=10, border=ft.border.all(1), padding=10, 
+            ),
+            ft.Container(content=
+                self.subs_view,
+                border_radius=10,
+                border=ft.border.all(1),
+                expand=False,
+                padding=5,
             )
+            ])
+        
+        
+        #return ft.Column(expand=True, controls=self.view)
         return self.view
 
 def main(page: ft.Page):
     page.title = 'Audio + Subtitle Player'
+    page.window_height = 800
     page.update()
 
     app = AudioSubPlayer()
