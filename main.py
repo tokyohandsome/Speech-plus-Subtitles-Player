@@ -7,10 +7,11 @@ import os
 import numpy as np
 
 audio_dir= "audio/"
-#audio_file = "Ren-ai.m4a"
+audio_file = "Ren-ai.m4a"
 #audio_file = "Ochiai.mp3"
 #audio_file = "YoroTakeshi.m4a"
-audio_file = "ukrain.m4a"
+#audio_file = "ukrain.m4a"
+audio_file = "pivot.m4a"
 srt_dir = "text/"
 srt_file = os.path.splitext(os.path.basename(audio_file))[0]+".txt"
 print(srt_dir+srt_file)
@@ -60,6 +61,7 @@ class SubButton(ft.UserControl):
     def build(self):
         self.display_start_time = ft.TextButton(text=f"{self.start_time} (ms)",
                                            tooltip="Click to jump",
+                                           key=self.index,
                                            on_click=self.jump_clicked,)
         self.display_text= ft.TextButton(text=f"{self.text}", 
                                          on_click=self.edit_clicked, 
@@ -71,6 +73,7 @@ class SubButton(ft.UserControl):
             alignment=ft.MainAxisAlignment.START,
             #vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
+                #ft.Text(value=self.index),
                 self.display_start_time,
                 self.display_text,
                 #ft.Row(spacing=0, controls=[ft.IconButton(ft.icons.PLAY_ARROW_OUTLINED,)])
@@ -144,10 +147,11 @@ class AudioSubPlayer(ft.UserControl):
         
         self.subs_view = ft.Column(
             spacing = 5,
-            height= 500,
+            height= 200,
             #expand=True,
             width = float("inf"),
             scroll = ft.ScrollMode.ALWAYS,
+            auto_scroll=False,
         )
         
         self.rewind_button = ft.ElevatedButton(
@@ -173,7 +177,7 @@ class AudioSubPlayer(ft.UserControl):
         #print("audio_slider.max:", self.audio_slider.max)
         self.audio_slider.divisions = self.audio_slider.max//60
         self.subtitles = create_subtitles("assets/"+srt_dir+srt_file)
-        print(self.subtitles)
+        #print(self.subtitles)
         #print(type(self.subtitles))
 
         # Extract subtitles as buttons
@@ -192,6 +196,7 @@ class AudioSubPlayer(ft.UserControl):
         self.audio_slider.value = e.data
         print("Position:", self.audio_slider.value)
         self.position_text.value = e.data
+        self.scroll_to(self.audio_slider.value)
         self.update()
 
     def slider_changed(self, e):
@@ -239,12 +244,16 @@ class AudioSubPlayer(ft.UserControl):
         self.audio1.seek(int(start_time))
         self.update
     
-    def scroll_to(self):
-       self.subs_view
+    def scroll_to(self, e):
+        end_time = [item[2] for item in self.subtitles]
+        index = np.argmin(np.abs(np.array(end_time) - e))
+        key=str(self.subtitles[index][0])
+        #print(f"e= {e}")
+        #print(f"index= {index}", f"type = {type(index)}")
+        #print(f'key={key}')
+        self.subs_view.scroll_to(key=key, duration=2000)
+        self.update()
     
-    def scroll_to(self):
-        self.subs_view.scroll_to() 
-
     # *** BUILD METHOD ***
     def build(self):
         self.view = ft.Column(expand=True, controls=[
@@ -273,7 +282,7 @@ class AudioSubPlayer(ft.UserControl):
                 self.subs_view,
                 border_radius=10,
                 border=ft.border.all(1),
-                expand=False,
+                #expand=False,
                 padding=5,
             )
             ])
