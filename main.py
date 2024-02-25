@@ -4,7 +4,7 @@ Supported mp3 sampling rate = 44.1KHz
 
 import flet as ft
 import os
-import re
+import numpy as np
 
 audio_dir= "audio/"
 #audio_file = "Ren-ai.m4a"
@@ -18,7 +18,7 @@ if srt_dir+srt_file:
     print("File exists.")
 
 # Create a list from text file.
-# subs[n] = [index_number: str, start_time: str, text: str]
+# subs[n] = [index_number: str, start_time: str, end_time: str, text: str]
 def create_subtitles(file):
     subs = []
     sub = []
@@ -27,13 +27,20 @@ def create_subtitles(file):
         for line in h.readlines():
             # Remove '\n' at the end of each line.
             line = line.rstrip()
-            if counter % 3 == 0:
+            if counter % 4 == 0:
+                # Index
                 sub = sub + [line]
                 counter += 1
-            elif counter % 3 == 1:
+            elif counter % 4 == 1:
+                # Start time
                 sub = sub + [line.zfill(8)]
                 counter += 1
+            elif counter % 4 == 2:
+                # End time
+                sub = sub + [int(line)]
+                counter += 1
             else:
+                # Text
                 sub = sub + [line]
                 subs.append(sub)
                 sub = []
@@ -41,10 +48,11 @@ def create_subtitles(file):
     return(subs)
 
 class SubButton(ft.UserControl):
-    def __init__(self, index, start_time, text, sub_time_clicked):
+    def __init__(self, index, start_time, end_time, text, sub_time_clicked):
         super().__init__()
         self.index = index
         self.start_time = start_time
+        self.end_time = end_time
         self.text = text
         self.sub_time_clicked = sub_time_clicked
         #self.main = main()
@@ -169,14 +177,14 @@ class AudioSubPlayer(ft.UserControl):
         #print(type(self.subtitles))
 
         # Extract subtitles as buttons
-        print("Extract subtitles as buttons.")
+        #print("Extract subtitles as buttons.")
         for i in range(len(self.subtitles)):
             index = self.subtitles[i][0]
             start_time = self.subtitles[i][1]
-            text = self.subtitles[i][2]
-            sub_time = ''
+            end_time = self.subtitles[i][2]
+            text = self.subtitles[i][3]
             # Create instance
-            sub = SubButton(index, start_time, text, self.sub_time_clicked)
+            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked)
             self.subs_view.controls.append(sub)
         self.update()
 
