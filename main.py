@@ -8,8 +8,9 @@ import re
 
 audio_dir= "audio/"
 #audio_file = "Ren-ai.m4a"
-audio_file = "Ochiai.mp3"
+#audio_file = "Ochiai.mp3"
 #audio_file = "YoroTakeshi.m4a"
+audio_file = "ukrain.m4a"
 srt_dir = "text/"
 srt_file = os.path.splitext(os.path.basename(audio_file))[0]+".txt"
 print(srt_dir+srt_file)
