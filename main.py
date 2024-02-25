@@ -49,13 +49,14 @@ def create_subtitles(file):
     return(subs)
 
 class SubButton(ft.UserControl):
-    def __init__(self, index, start_time, end_time, text, sub_time_clicked):
+    def __init__(self, index, start_time, end_time, text, sub_time_clicked, play_button):
         super().__init__()
         self.index = index
         self.start_time = start_time
         self.end_time = end_time
         self.text = text
         self.sub_time_clicked = sub_time_clicked
+        self.play_button = play_button
         #self.main = main()
     
     def build(self):
@@ -111,11 +112,13 @@ class SubButton(ft.UserControl):
         self.display_text.text= self.edit_text.value
         self.display_view.visible = True
         self.edit_view.visible = False
+        self.play_button.focus()
         self.update()
 
     def cancel_clicked(self, e):
         self.display_view.visible = True
         self.edit_view.visible = False
+        self.play_button.focus()
         self.update()
 
     def jump_clicked(self, e):
@@ -188,7 +191,7 @@ class AudioSubPlayer(ft.UserControl):
             end_time = self.subtitles[i][2]
             text = self.subtitles[i][3]
             # Create instance
-            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked)
+            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button)
             self.subs_view.controls.append(sub)
         self.update()
 
