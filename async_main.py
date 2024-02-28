@@ -57,7 +57,6 @@ class SubButton(ft.UserControl):
         self.text = text
         self.sub_time_clicked = sub_time_clicked
         self.play_button = play_button
-        #self.main = main()
     
     def build(self):
         self.display_start_time = ft.TextButton(text=f"{self.start_time} (ms)",
@@ -100,29 +99,29 @@ class SubButton(ft.UserControl):
         )
         return ft.Column(controls=[self.display_view, self.edit_view])
 
-    def edit_clicked(self, e):
+    async def edit_clicked(self, e):
         self.edit_text.value = self.display_text.text
-        self.edit_text.focus()
+        await self.edit_text.focus_async()
         self.display_view.visible = False
         self.edit_view.visible = True
         self.edit_text.on_submit = self.save_clicked
-        self.update()
+        await self.update_async()
 
-    def save_clicked(self, e):
+    async def save_clicked(self, e):
         self.display_text.text= self.edit_text.value
         self.display_view.visible = True
         self.edit_view.visible = False
-        self.play_button.focus()
-        self.update()
+        await self.play_button.focus_async()
+        await self.update_async()
 
-    def cancel_clicked(self, e):
+    async def cancel_clicked(self, e):
         self.display_view.visible = True
         self.edit_view.visible = False
-        self.play_button.focus()
-        self.update()
+        await self.play_button.focus_async()
+        await self.update_async()
 
-    def jump_clicked(self, e):
-        self.sub_time_clicked(self.start_time)
+    async def jump_clicked(self, e):
+        await self.sub_time_clicked(self.start_time)
 
 class AudioSubPlayer(ft.UserControl):
     def __init__(self):
@@ -150,7 +149,7 @@ class AudioSubPlayer(ft.UserControl):
         
         self.subs_view = ft.Column(
             spacing = 5,
-            height= 200,
+            height= 400,
             #expand=True,
             width = float("inf"),
             scroll = ft.ScrollMode.ALWAYS,
@@ -163,6 +162,11 @@ class AudioSubPlayer(ft.UserControl):
             tooltip='Rewind 5 secs',
             on_click=self.rewind_clicked,
         )
+
+        self.sub_scroller_sw = ft.Switch(
+            label='Auto scroll',
+            value=True,
+        )
         
         self.audio1 = ft.Audio(
             src=audio_dir+audio_file,
@@ -173,12 +177,16 @@ class AudioSubPlayer(ft.UserControl):
             on_state_changed = self.playback_completed,
         )
 
-    def loaded(self, e):
+    async def loaded(self, e):
         #print("Loaded")
-        self.audio_slider.max = self.audio1.get_duration()
+        #await self.audio1.get_duration_async()
+        #print(f'type of get_duration_async() = {type(self.audio1.get_duration_async)}')
+        self.audio_slider.max = int(await self.audio1.get_duration_async())
+        #print(f'type(self.audio_slider.max) = {type(self.audio_slider.max)}')
         self.duration_text.value = self.audio_slider.max
         #print("audio_slider.max:", self.audio_slider.max)
         self.audio_slider.divisions = self.audio_slider.max//60
+        #self.audio_slider.divisions = round(self.audio_slider.max/60)
         self.subtitles = create_subtitles("assets/"+srt_dir+srt_file)
         #print(self.subtitles)
         #print(type(self.subtitles))
@@ -193,72 +201,71 @@ class AudioSubPlayer(ft.UserControl):
             # Create instance
             sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button)
             self.subs_view.controls.append(sub)
-        self.update()
+        await self.update_async()
 
-    def position_changed(self, e):
+    async def position_changed(self, e):
         self.audio_slider.value = e.data
         print("Position:", self.audio_slider.value)
         self.position_text.value = e.data
-        self.scroll_to(self.audio_slider.value)
-        self.update()
+        if self.sub_scroller_sw.value == True:
+            await self.scroll_to(self.audio_slider.value)
+        await self.update_async()
 
-    def slider_changed(self, e):
-        self.audio1.seek(int(self.audio_slider.value))
+    async def slider_changed(self, e):
+        await self.audio1.seek_async(int(self.audio_slider.value))
         print(int(self.audio_slider.value))
-        self.update()
+        await self.update_async()
 
-    def play_button_clicked(self, e):
-        self.position = self.audio1.get_current_position()
+    async def play_button_clicked(self, e):
+        self.position = await self.audio1.get_current_position_async()
         #print("Position:", page.position)
         if (self.isPlaying == False) and (self.position == 0):
-            self.audio1.play()
+            await self.audio1.play_async()
             self.isPlaying = True
             self.play_button.icon=ft.icons.PAUSE
             self.play_button.text = "Playing"
         elif self.isPlaying == False:
-            self.audio1.resume()
+            await self.audio1.resume_async()
             self.isPlaying = True
             self.play_button.icon=ft.icons.PAUSE
             self.play_button.text = "Playing"
         else:
-            self.audio1.pause()
+            await self.audio1.pause_async()
             self.isPlaying = False
             self.play_button.icon=ft.icons.PLAY_ARROW
             self.play_button.text = "Paused"
-        self.update()
+        await self.update_async()
     
-    def playback_completed(self, e):
+    async def playback_completed(self, e):
         if e.data == "completed":
             self.isPlaying = False 
             self.play_button.icon=ft.icons.PLAY_ARROW
             self.play_button.text = "Play"
-        self.update()
+        await self.update_async()
     
-    def rewind_clicked(self, e):
+    async def rewind_clicked(self, e):
         if self.audio_slider.value <= 5*1000:
             self.audio_slider.value = 0
         else:
             self.audio_slider.value -= 5*1000
-        self.audio1.seek(int(self.audio_slider.value))
+        await self.audio1.seek_async(int(self.audio_slider.value))
         print(int(self.audio_slider.value))
-        self.update()
+        await self.update_async()
 
-    def sub_time_clicked(self, start_time):
-        self.audio1.seek(int(start_time))
-        self.update
+    async def sub_time_clicked(self, start_time):
+        await self.audio1.seek_async(int(start_time))
+        await self.update_async()
     
-    def scroll_to(self, e):
-        '''
+    async def scroll_to(self, e):
         end_time = [item[2] for item in self.subtitles]
         index = np.argmin(np.abs(np.array(end_time) - e))
         key=str(self.subtitles[index][0])
         #print(f"e= {e}")
         #print(f"index= {index}", f"type = {type(index)}")
         #print(f'key={key}')
-        self.subs_view.scroll_to(key=key, duration=2000)
-        self.update()
-        '''
-        pass
+        #await self.subs_view.scroll_to_async(key=key, duration=2000)
+        await self.subs_view.scroll_to_async(key=key, duration =1000)
+        await self.update_async()
     
     # *** BUILD METHOD ***
     def build(self):
@@ -277,6 +284,7 @@ class AudioSubPlayer(ft.UserControl):
                     ft.Row(controls=[
                         self.rewind_button,
                         self.play_button,
+                        self.sub_scroller_sw,
                         ft.ElevatedButton(
                             "Get current position",
                             on_click=lambda _: print("Current position:", self.audio1.get_current_position()),
@@ -293,21 +301,19 @@ class AudioSubPlayer(ft.UserControl):
             )
             ])
         
-        
         #return ft.Column(expand=True, controls=self.view)
         return self.view
 
-def main(page: ft.Page):
+async def main(page: ft.Page):
     page.title = 'Audio + Subtitle Player'
     page.window_height = 800
-    page.update()
+    await page.update_async()
 
     app = AudioSubPlayer()
     
-    page.add(app)
-    print("Page added.")
+    await page.add_async(app)
     page.overlay.append(app.audio1)
-    page.update()
+    await page.update_async()
 
 
 ft.app(target=main, assets_dir="assets")
