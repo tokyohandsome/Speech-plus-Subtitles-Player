@@ -6,15 +6,18 @@ import flet as ft
 import os
 import numpy as np
 
-audio_dir= "audio/"
-audio_file = "Ren-ai.m4a"
-#audio_file = "Ochiai.mp3"
-#audio_file = "YoroTakeshi.m4a"
-#audio_file = "ukrain.m4a"
-audio_file = "pivot.m4a"
+speech_dir= "speech/"
+speech_file = ''
+#speech_file = "Ren-ai.m4a"
+#speech_file = "Ochiai.mp3"
+speech_file = "YoroTakeshi.m4a"
+#speech_file = "ukrain.m4a"
+#speech_file = "pivot.m4a"
 srt_dir = "text/"
-srt_file = os.path.splitext(os.path.basename(audio_file))[0]+".txt"
-print(srt_dir+srt_file)
+srt_file = ''
+if speech_file != '':
+    srt_file = os.path.splitext(os.path.basename(speech_file))[0]+".txt"
+    print(srt_dir+srt_file)
 if srt_dir+srt_file:
     print("File exists.")
 
@@ -124,11 +127,15 @@ class SubButton(ft.UserControl):
         await self.sub_time_clicked(self.start_time)
 
 class AudioSubPlayer(ft.UserControl):
-    def __init__(self):
+    def __init__(self, speech_dir, speech_file, srt_dir, srt_file):
         super().__init__()
         self.position = 0
         self.duration = 0
         self.isPlaying = False
+        self.speech_dir = speech_dir
+        self.speech_file = speech_file
+        self.srt_dir = srt_dir
+        self.srt_file = srt_file
 
         self.audio_slider = ft.Slider(
             min = 0,
@@ -169,13 +176,29 @@ class AudioSubPlayer(ft.UserControl):
         )
         
         self.audio1 = ft.Audio(
-            src=audio_dir+audio_file,
+            src=self.speech_dir+self.speech_file,
             volume=1,
             balance=0,
             on_loaded=self.loaded,
             on_position_changed = self.position_changed,
             on_state_changed = self.playback_completed,
         )
+
+        #self.pick_files_dialog = ft.FilePicker(on_result=self.pick_speech_file_result)
+        #self.selected_files = ft.Text()
+
+        self.save_file_dialog = ft.FilePicker(on_result=self.save_file_result)
+        self.save_file_path = ft.Text()
+
+        self.speech_file_button = ft.ElevatedButton(
+            text='Speech File', 
+            icon=ft.icons.MUSIC_NOTE, 
+            on_click=self.pick_speech_file,
+        )
+
+        self.pick_speech_file_dialog = ft.FilePicker(on_result=self.pick_speech_file_result)
+
+        self.speech_file_name = ft.Text(value=f"{self.speech_file}")
 
     async def loaded(self, e):
         #print("Loaded")
@@ -267,14 +290,48 @@ class AudioSubPlayer(ft.UserControl):
         await self.subs_view.scroll_to_async(key=key, duration =1000)
         await self.update_async()
     
+    async def pick_speech_file(self, e):
+        await self.pick_speech_file_dialog.pick_files_async(
+            dialog_title='Select a SPEECH (audio) file',
+            allow_multiple=False,
+        )
+
+    async def pick_speech_file_result(self, e: ft.FilePickerResultEvent):
+        if e.files:
+            print(f'e.files = {e.files}')
+            #print(f'type(e.files) = {type(e.files)}')
+            self.speech_file = ''.join(map(lambda f: f.name, e.files))
+            print(f'File name= {self.speech_file}')
+            self.speech_dir = os.path.dirname(''.join(map(lambda f: f.path, e.files)))+'/'
+            print(f'Full path= {self.speech_dir}')
+            #await self.speech_file_name.update_async()
+            await self.audio1.update_async()
+            await self.update_async()
+
+    # Save file dialog
+    async def save_file_result(self, e: ft.FilePickerResultEvent):
+        self.save_file_path.value = e.path if e.path else "Cancelled!"
+        await self.save_file_path.update()
+
     # *** BUILD METHOD ***
     def build(self):
         self.view = ft.Column(expand=True, controls=[
             ft.Container(content=
                 ft.Column(controls=[
-                    ft.Text(value=f"Base Directories: assets/audio and assets/text"),
-                    ft.Text(value=f"Audio File: {audio_file}"),
-                    ft.Text(value=f"Text File: {srt_file}"),
+                    ft.Row(controls=[
+                        ft.Text(value=f"Base Directories: assets/audio and assets/text"),
+                    ]),
+                    ft.Row(controls=[
+                        self.speech_file_button,
+                        #ft.Text(value=f"{self.speech_file}"),
+                        self.speech_file_name,
+                    ]),
+                    ft.Row(controls=[
+                        ft.ElevatedButton(text='Text/SRT File', icon=ft.icons.TEXT_SNIPPET_OUTLINED),
+                        ft.Text(value=f"{srt_file}"),
+                        ft.ElevatedButton(text='Save', icon=ft.icons.SAVE_OUTLINED, tooltip='Update current Text/SRT file'),
+                        ft.ElevatedButton(text='Export as...', icon=ft.icons.SAVE_ALT),
+                    ]),
                     self.audio_slider,
                     ft.Row([
                         ft.Text(value="0"),
@@ -305,13 +362,14 @@ class AudioSubPlayer(ft.UserControl):
         return self.view
 
 async def main(page: ft.Page):
-    page.title = 'Audio + Subtitle Player'
+    page.title = 'Speech + Subtitle Player'
     page.window_height = 800
     await page.update_async()
 
-    app = AudioSubPlayer()
+    app = AudioSubPlayer(speech_dir, speech_file, srt_dir, srt_file)
     
     await page.add_async(app)
+    page.overlay.extend([app.pick_speech_file_dialog, app.save_file_dialog])
     page.overlay.append(app.audio1)
     await page.update_async()
 
