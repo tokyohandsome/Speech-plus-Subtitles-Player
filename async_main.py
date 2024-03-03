@@ -6,49 +6,92 @@ import flet as ft
 import os
 import numpy as np
 
-speech_dir= "speech/"
+speech_dir= "Speech_and_Text/"
 speech_file = ''
-#speech_file = "Ren-ai.m4a"
-#speech_file = "Ochiai.mp3"
-speech_file = "YoroTakeshi.m4a"
-#speech_file = "ukrain.m4a"
-#speech_file = "pivot.m4a"
-srt_dir = "text/"
-srt_file = ''
+text_dir = "Speech_and_Text/"
+text_file = ''
+'''
 if speech_file != '':
-    srt_file = os.path.splitext(os.path.basename(speech_file))[0]+".txt"
-    print(srt_dir+srt_file)
-if srt_dir+srt_file:
+    text_file = os.path.splitext(os.path.basename(speech_file))[0]+".txt"
+    print(text_dir+text_file)
+if text_dir+text_file:
     print("File exists.")
+'''
+def ms_to_hhmmssnnn(milliseconds):
+    seconds = int(milliseconds / 1000)
+    h = seconds // 3600
+    m = (seconds - h * 3600) // 60
+    s = seconds - h * 3600 - m * 60
+    n = round(milliseconds % 1000)
+    return f"{h:02}:{m:02}:{s:02},{n:03}"
 
-# Create a list from text file.
-# subs[n] = [index_number: str, start_time: str, end_time: str, text: str]
+    # Convert hh:mm:ss,nnn to milliseconds
+def hhmmssnnn_to_ms(time_str):
+    try:
+        hh, mm, ss_nnn = time_str.split(":")
+        hh, mm, ss_nnn = int(hh), int(mm), int(ss_nnn.replace(',' , ''))
+        total_seconds = hh * 3600 + mm * 60 + ss_nnn // 1000
+        milliseconds = total_seconds * 1000 + ss_nnn % 1000
+        return milliseconds
+    except ValueError:
+        print("Invalid time format. Please use hh:mm:ss,nnn format.")
+
+# Create a list of subtitles from text file.
+# subs[n] = [index_number: str, start_time: str, end_time: int, text: str]
 def create_subtitles(file):
     subs = []
     sub = []
     counter = 0
-    with open(file, 'r') as h:
-        for line in h.readlines():
-            # Remove '\n' at the end of each line.
-            line = line.rstrip()
-            if counter % 4 == 0:
-                # Index
-                sub = sub + [line]
-                counter += 1
-            elif counter % 4 == 1:
-                # Start time
-                sub = sub + [line.zfill(8)]
-                counter += 1
-            elif counter % 4 == 2:
-                # End time
-                sub = sub + [int(line)]
-                counter += 1
-            else:
-                # Text
-                sub = sub + [line]
-                subs.append(sub)
-                sub = []
-                counter += 1
+    extension = os.path.splitext(file)[1]
+
+    # Source file is ssp file format, one block consists of 4 lines: index, start_time, end_time, text
+    if extension == '.ssp':
+        with open(file, 'r') as h:
+            for line in h.readlines():
+                # Remove '\n' at the end of each line.
+                line = line.rstrip()
+                if counter % 4 == 0:
+                    # Index
+                    sub = sub + [line]
+                    counter += 1
+                elif counter % 4 == 1:
+                    # Start time
+                    sub = sub + [line.zfill(8)]
+                    counter += 1
+                elif counter % 4 == 2:
+                    # End time
+                    sub = sub + [int(line)]
+                    counter += 1
+                else:
+                    # Text
+                    sub = sub + [line]
+                    subs.append(sub)
+                    sub = []
+                    counter += 1
+    # Source file is srt file format, one block consists of 4 lines: index, start_time --> end_time, text, empty line
+    elif extension == '.srt':
+        with open(file, 'r') as h:
+            for line in h.readlines():
+                # Remove '\n' at the end of each line.
+                line = line.rstrip()
+                if counter % 4 == 0:
+                    # Index
+                    sub = sub + [line]
+                    counter += 1
+                elif counter % 4 == 1:
+                    # Start time and End time
+                    start_time, end_time = line.split(' --> ')
+                    sub = sub + [str(hhmmssnnn_to_ms(start_time)).zfill(8)]
+                    sub = sub + [hhmmssnnn_to_ms(end_time)]
+                    counter += 1
+                elif counter %4 == 2:
+                    # Text
+                    sub = sub + [line]
+                    counter += 1
+                else:
+                    subs.append(sub)
+                    sub = []
+                    counter += 1
     return(subs)
 
 class SubButton(ft.UserControl):
@@ -127,15 +170,18 @@ class SubButton(ft.UserControl):
         await self.sub_time_clicked(self.start_time)
 
 class AudioSubPlayer(ft.UserControl):
-    def __init__(self, speech_dir, speech_file, srt_dir, srt_file):
+    def __init__(self, speech_dir, speech_file, text_dir, text_file, load_audio):
         super().__init__()
         self.position = 0
         self.duration = 0
         self.isPlaying = False
         self.speech_dir = speech_dir
         self.speech_file = speech_file
-        self.srt_dir = srt_dir
-        self.srt_file = srt_file
+        self.text_dir = text_dir
+        self.text_file = text_file
+        self.load_audio = load_audio
+
+        self.base_dir = ft.Text(value=f"Base Directory: {os.path.dirname(self.speech_file)}")
 
         self.audio_slider = ft.Slider(
             min = 0,
@@ -151,8 +197,8 @@ class AudioSubPlayer(ft.UserControl):
             on_click=self.play_button_clicked
         )
 
-        self.position_text = ft.Text(value=self.audio_slider.value)
-        self.duration_text = ft.Text(value=self.duration)
+        self.position_text = ft.Text(value=0)
+        self.duration_text = ft.Text(value='ms (hh:mm:ss,nnn)')
         
         self.subs_view = ft.Column(
             spacing = 5,
@@ -184,9 +230,6 @@ class AudioSubPlayer(ft.UserControl):
             on_state_changed = self.playback_completed,
         )
 
-        #self.pick_files_dialog = ft.FilePicker(on_result=self.pick_speech_file_result)
-        #self.selected_files = ft.Text()
-
         self.save_file_dialog = ft.FilePicker(on_result=self.save_file_result)
         self.save_file_path = ft.Text()
 
@@ -198,24 +241,26 @@ class AudioSubPlayer(ft.UserControl):
 
         self.pick_speech_file_dialog = ft.FilePicker(on_result=self.pick_speech_file_result)
 
-        self.speech_file_name = ft.Text(value=f"{self.speech_file}")
+        self.speech_file_name = ft.Text(value='← Click to open a speech file.')
+
+        self.text_file_button = ft.ElevatedButton(
+            text='SRT/SSP File',
+            icon=ft.icons.TEXT_SNIPPET_OUTLINED,
+            on_click=self.pick_text_file,
+        )
+        
+        self.pick_text_file_dialog = ft.FilePicker(on_result=self.pick_text_file_result)
+
+        self.text_file_name = ft.Text(value='↑ Open a speech file first.')
 
     async def loaded(self, e):
-        #print("Loaded")
-        #await self.audio1.get_duration_async()
-        #print(f'type of get_duration_async() = {type(self.audio1.get_duration_async)}')
         self.audio_slider.max = int(await self.audio1.get_duration_async())
-        #print(f'type(self.audio_slider.max) = {type(self.audio_slider.max)}')
-        self.duration_text.value = self.audio_slider.max
-        #print("audio_slider.max:", self.audio_slider.max)
+        self.duration_text.value = str(self.audio_slider.max)+f'ms ({ms_to_hhmmssnnn(self.audio_slider.max)})'
         self.audio_slider.divisions = self.audio_slider.max//60
-        #self.audio_slider.divisions = round(self.audio_slider.max/60)
-        self.subtitles = create_subtitles("assets/"+srt_dir+srt_file)
-        #print(self.subtitles)
-        #print(type(self.subtitles))
+        self.subtitles = create_subtitles(self.text_file)
 
         # Extract subtitles as buttons
-        #print("Extract subtitles as buttons.")
+        self.subs_view.controls.clear()
         for i in range(len(self.subtitles)):
             index = self.subtitles[i][0]
             start_time = self.subtitles[i][1]
@@ -292,21 +337,60 @@ class AudioSubPlayer(ft.UserControl):
     
     async def pick_speech_file(self, e):
         await self.pick_speech_file_dialog.pick_files_async(
-            dialog_title='Select a SPEECH (audio) file',
+            dialog_title='Select a speech (audio) file',
             allow_multiple=False,
+            allowed_extensions=['mp3', 'm4a', 'wav'],
+            file_type=ft.FilePickerFileType.CUSTOM,
         )
 
     async def pick_speech_file_result(self, e: ft.FilePickerResultEvent):
         if e.files:
             print(f'e.files = {e.files}')
             #print(f'type(e.files) = {type(e.files)}')
-            self.speech_file = ''.join(map(lambda f: f.name, e.files))
-            print(f'File name= {self.speech_file}')
-            self.speech_dir = os.path.dirname(''.join(map(lambda f: f.path, e.files)))+'/'
-            print(f'Full path= {self.speech_dir}')
+            self.speech_file_name.value = ''.join(map(lambda f: f.name, e.files))
+            print(f'File name= {self.speech_file}, type = {type(self.speech_file)}')
+            self.speech_file = ''.join(map(lambda f: f.path, e.files))
+            print(f'Full path= {self.speech_file}')
+            self.audio1.src = self.speech_file
+            self.base_dir.value=f"Base Directorie: {os.path.dirname(self.speech_file)}"
+            await self.check_text_file()
             #await self.speech_file_name.update_async()
-            await self.audio1.update_async()
+            #await self.audio1.update_async()
             await self.update_async()
+            await self.load_audio()
+    
+    async def pick_text_file(self, e):
+        await self.pick_text_file_dialog.pick_files_async(
+            dialog_title='Select a text file',
+            allow_multiple=False,
+            allowed_extensions=['txt', 'srt', 'ssp'],
+            file_type=ft.FilePickerFileType.CUSTOM,
+        )
+    
+    async def pick_text_file_result(self, e: ft.FilePickerResultEvent):
+        if e.files:
+            print(f'e.files = {e.files}')
+            self.text_file_name.value = ''.join(map(lambda f: f.name, e.files))
+            print(f'File name= {self.text_file}, type = {type(self.text_file)}')
+            self.text_file = ''.join(map(lambda f: f.path, e.files))
+            print(f'Full path= {self.text_file}')
+            #await self.check_text_file()
+            await self.update_async()
+            await self.load_audio()
+
+    async def check_text_file(self):
+        print(self.speech_file)
+        self.text_file = os.path.splitext(self.speech_file)[0]+".srt"
+        tmp_file = os.path.splitext(self.speech_file)[0]
+        if os.path.exists(tmp_file+'.srt'):
+            self.text_file = tmp_file+'.srt'
+            self.text_file_name.value = os.path.basename(self.text_file)
+        elif os.path.exists(tmp_file+'.ssp'):
+            self.text_file = tmp_file+'.ssp'
+            self.text_file_name.value = os.path.basename(self.text_file)
+        else:
+            self.text_file, self.text_file_name = 'No Text File.'
+        print(self.text_file)
 
     # Save file dialog
     async def save_file_result(self, e: ft.FilePickerResultEvent):
@@ -319,16 +403,16 @@ class AudioSubPlayer(ft.UserControl):
             ft.Container(content=
                 ft.Column(controls=[
                     ft.Row(controls=[
-                        ft.Text(value=f"Base Directories: assets/audio and assets/text"),
+                        self.base_dir,
                     ]),
                     ft.Row(controls=[
                         self.speech_file_button,
-                        #ft.Text(value=f"{self.speech_file}"),
                         self.speech_file_name,
                     ]),
                     ft.Row(controls=[
-                        ft.ElevatedButton(text='Text/SRT File', icon=ft.icons.TEXT_SNIPPET_OUTLINED),
-                        ft.Text(value=f"{srt_file}"),
+                        #ft.ElevatedButton(text='SRT/SSP File', icon=ft.icons.TEXT_SNIPPET_OUTLINED),
+                        self.text_file_button,
+                        self.text_file_name,
                         ft.ElevatedButton(text='Save', icon=ft.icons.SAVE_OUTLINED, tooltip='Update current Text/SRT file'),
                         ft.ElevatedButton(text='Export as...', icon=ft.icons.SAVE_ALT),
                     ]),
@@ -366,11 +450,17 @@ async def main(page: ft.Page):
     page.window_height = 800
     await page.update_async()
 
-    app = AudioSubPlayer(speech_dir, speech_file, srt_dir, srt_file)
+    async def load_audio():
+        page.overlay.append(app.audio1)
+        print(f'app.audio1 = {app.audio1}')
+        print('Load audio file and update page.')
+        await page.update_async()
+
+    app = AudioSubPlayer(speech_dir, speech_file, text_dir, text_file, load_audio)
     
     await page.add_async(app)
-    page.overlay.extend([app.pick_speech_file_dialog, app.save_file_dialog])
-    page.overlay.append(app.audio1)
+    page.overlay.extend([app.pick_speech_file_dialog, app.pick_text_file_dialog, app.save_file_dialog])
+    #page.overlay.append(app.audio1)
     await page.update_async()
 
 
