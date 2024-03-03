@@ -105,7 +105,7 @@ class SubButton(ft.UserControl):
         self.play_button = play_button
     
     def build(self):
-        self.display_start_time = ft.TextButton(text=f"{self.start_time} (ms)",
+        self.display_start_time = ft.TextButton(text=f"{ms_to_hhmmssnnn(int(self.start_time))}",
                                            tooltip="Click to jump",
                                            key=self.index,
                                            on_click=self.jump_clicked,)
@@ -197,8 +197,8 @@ class AudioSubPlayer(ft.UserControl):
             on_click=self.play_button_clicked
         )
 
-        self.position_text = ft.Text(value=0)
-        self.duration_text = ft.Text(value='ms (hh:mm:ss,nnn)')
+        self.position_text = ft.Text(value='Current position')
+        self.duration_text = ft.Text(value='Duration (hh:mm:ss,nnn)')
         
         self.subs_view = ft.Column(
             spacing = 5,
@@ -210,10 +210,16 @@ class AudioSubPlayer(ft.UserControl):
         )
         
         self.rewind_button = ft.ElevatedButton(
-            icon=ft.icons.FAST_REWIND,
+            icon=ft.icons.REPLAY_5,
             text="5 secs",
             tooltip='Rewind 5 secs',
             on_click=self.rewind_clicked,
+        )
+
+        self.faster_sw = ft.Switch(
+            label='1.5x',
+            value=False,
+            on_change=self.playback_rate,
         )
 
         self.sub_scroller_sw = ft.Switch(
@@ -225,6 +231,7 @@ class AudioSubPlayer(ft.UserControl):
             src=self.speech_dir+self.speech_file,
             volume=1,
             balance=0,
+            playback_rate=1,
             on_loaded=self.loaded,
             on_position_changed = self.position_changed,
             on_state_changed = self.playback_completed,
@@ -235,7 +242,7 @@ class AudioSubPlayer(ft.UserControl):
 
         self.speech_file_button = ft.ElevatedButton(
             text='Speech File', 
-            icon=ft.icons.MUSIC_NOTE, 
+            icon=ft.icons.RECORD_VOICE_OVER_OUTLINED, 
             on_click=self.pick_speech_file,
         )
 
@@ -255,7 +262,7 @@ class AudioSubPlayer(ft.UserControl):
 
     async def loaded(self, e):
         self.audio_slider.max = int(await self.audio1.get_duration_async())
-        self.duration_text.value = str(self.audio_slider.max)+f'ms ({ms_to_hhmmssnnn(self.audio_slider.max)})'
+        self.duration_text.value = f'{ms_to_hhmmssnnn(self.audio_slider.max)}'
         self.audio_slider.divisions = self.audio_slider.max//60
         self.subtitles = create_subtitles(self.text_file)
 
@@ -274,7 +281,7 @@ class AudioSubPlayer(ft.UserControl):
     async def position_changed(self, e):
         self.audio_slider.value = e.data
         print("Position:", self.audio_slider.value)
-        self.position_text.value = e.data
+        self.position_text.value = ms_to_hhmmssnnn(int(e.data))
         if self.sub_scroller_sw.value == True:
             await self.scroll_to(self.audio_slider.value)
         await self.update_async()
@@ -319,6 +326,15 @@ class AudioSubPlayer(ft.UserControl):
         await self.audio1.seek_async(int(self.audio_slider.value))
         print(int(self.audio_slider.value))
         await self.update_async()
+    
+    async def playback_rate(self, e):
+        if self.faster_sw.value == True:
+            self.audio1.playback_rate = 1.5
+        else:
+            self.audio1.playback_rate = 1
+        print(f'Playback rate: {self.audio1.playback_rate}')
+        await self.audio1.update_async()
+
 
     async def sub_time_clicked(self, start_time):
         await self.audio1.seek_async(int(start_time))
@@ -328,10 +344,6 @@ class AudioSubPlayer(ft.UserControl):
         end_time = [item[2] for item in self.subtitles]
         index = np.argmin(np.abs(np.array(end_time) - e))
         key=str(self.subtitles[index][0])
-        #print(f"e= {e}")
-        #print(f"index= {index}", f"type = {type(index)}")
-        #print(f'key={key}')
-        #await self.subs_view.scroll_to_async(key=key, duration=2000)
         await self.subs_view.scroll_to_async(key=key, duration =1000)
         await self.update_async()
     
@@ -352,7 +364,7 @@ class AudioSubPlayer(ft.UserControl):
             self.speech_file = ''.join(map(lambda f: f.path, e.files))
             print(f'Full path= {self.speech_file}')
             self.audio1.src = self.speech_file
-            self.base_dir.value=f"Base Directorie: {os.path.dirname(self.speech_file)}"
+            self.base_dir.value=f"Base Directory: {os.path.dirname(self.speech_file)}"
             await self.check_text_file()
             #await self.speech_file_name.update_async()
             #await self.audio1.update_async()
@@ -410,7 +422,6 @@ class AudioSubPlayer(ft.UserControl):
                         self.speech_file_name,
                     ]),
                     ft.Row(controls=[
-                        #ft.ElevatedButton(text='SRT/SSP File', icon=ft.icons.TEXT_SNIPPET_OUTLINED),
                         self.text_file_button,
                         self.text_file_name,
                         ft.ElevatedButton(text='Save', icon=ft.icons.SAVE_OUTLINED, tooltip='Update current Text/SRT file'),
@@ -418,13 +429,14 @@ class AudioSubPlayer(ft.UserControl):
                     ]),
                     self.audio_slider,
                     ft.Row([
-                        ft.Text(value="0"),
+                        ft.Text(value="00:00:00,000"),
                         self.position_text,
                         self.duration_text,
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Row(controls=[
                         self.rewind_button,
                         self.play_button,
+                        self.faster_sw,
                         self.sub_scroller_sw,
                         ft.ElevatedButton(
                             "Get current position",
