@@ -71,7 +71,7 @@ def create_subtitles(file):
                     sub = []
                     counter += 1
     # Source file is srt file format, one block consists of 4 lines: index, start_time --> end_time, text, empty line
-    elif extension == '.srt':
+    elif extension == '.txt':
         with open(file, 'r') as h:
             for line in h.readlines():
                 print(counter)
@@ -95,6 +95,36 @@ def create_subtitles(file):
                     subs.append(sub)
                     sub = []
                     counter += 1
+    elif extension == '.srt':
+        with open(file, 'r') as h:
+            index = 1
+            for line in h.readlines():
+                print(counter)
+                # Remove '\n' at the end of each line.
+                line = line.rstrip()
+                if counter % 4 == 0:
+                    # Index
+                    sub = sub + [index]
+                    counter += 1
+                elif counter % 4 == 1:
+                    # Start time and End time
+                    start_time, end_time = line.split(' --> ')
+                    sub = sub + [str(hhmmssnnn_to_ms(start_time)).zfill(8)]
+                    sub = sub + [hhmmssnnn_to_ms(end_time)]
+                    counter += 1
+                elif counter %4 == 2:
+                    # Text
+                    sub = sub + [line]
+                    counter += 1
+                else:
+                    if sub[3] =='':
+                        sub = []
+                        counter += 1
+                        continue
+                    subs.append(sub)
+                    sub = []
+                    counter += 1
+                    index += 1
     return(subs)
 
 class SubButton(ft.UserControl):
@@ -124,7 +154,7 @@ class SubButton(ft.UserControl):
             alignment=ft.MainAxisAlignment.START,
             #vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                #ft.Text(value=self.index),
+                ft.Text(value=self.index),
                 self.display_start_time,
                 self.display_text,
                 #ft.Row(spacing=0, controls=[ft.IconButton(ft.icons.PLAY_ARROW_OUTLINED,)])
@@ -277,10 +307,10 @@ class AudioSubPlayer(ft.UserControl):
             title = ft.Text('Export text as...'),
             content = ft.Text('Plesae select a file type.'),
             actions = [
-                ft.TextButton('SRT', on_click=self.export_srt, tooltip='Standard subtitle format'),
-                ft.TextButton('TXT', on_click=self.export_txt, tooltip='Subtitles text only'),
+                ft.TextButton('SRT', on_click=self.export_srt, tooltip='Subtitles with timestamps'),
+                ft.TextButton('TXT', on_click=self.export_txt, tooltip='Subtitles without timestamps'),
                 ft.TextButton('CSV', on_click=self.export_csv, tooltip='Comma separated value'),
-                ft.TextButton('Cancel', on_click=self.close_dialog),
+                ft.TextButton('Cancel', on_click=self.close_export_dialog),
             ],
             actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
@@ -305,7 +335,7 @@ class AudioSubPlayer(ft.UserControl):
             title=ft.Text('Change not saved.'),
             content=ft.Text('Do you want to discard the change?'),
             actions=[
-                ft.TextButton('Save', on_click=self.save_file_result),
+                #ft.TextButton('Save', on_click=self.save_then_open, tooltip='Save then open another file.'),
                 ft.TextButton('Open without save', on_click=self.open_without_save, tooltip='Change will be lost.'),
                 ft.TextButton('Cancel', on_click=self.close_save_or_cancel_dialog),
             ]
@@ -336,8 +366,23 @@ class AudioSubPlayer(ft.UserControl):
             end_time = self.subtitles[i][2]
             text = self.subtitles[i][3]
             # Create instance
-            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button, self.save_button, self.subtitles)
+            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button, 
+                            self.save_button, self.subtitles)
             self.subs_view.controls.append(sub)
+        '''
+        index = 0
+        for i in range(len(self.subtitles)):
+            text = self.subtitles[i][3]
+            if text =='':
+                continue
+            index += 1
+            start_time = self.subtitles[i][1]
+            end_time = self.subtitles[i][2]
+            # Create instance
+            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button, 
+                            self.save_button, self.subtitles)
+            self.subs_view.controls.append(sub)
+            '''
         await self.update_async()
 
     async def position_changed(self, e):
@@ -509,12 +554,16 @@ class AudioSubPlayer(ft.UserControl):
         self.save_button.text=('Save')
         await self.update_async()
 
-
-
     async def save_file_result(self, e: ft.FilePickerResultEvent):
         self.save_file_path.value = e.path if e.path else "Cancelled!"
         await self.save_file_path.update()
-    
+    '''
+    async def save_then_open(self):
+        await self.close_save_or_cancel_dialog()
+        await self.save_clicked()
+        await self.update_async()
+        await self.pick_speech_file()
+    '''
     async def export_srt(self, e):
         pass
 
@@ -528,8 +577,8 @@ class AudioSubPlayer(ft.UserControl):
         self.page.dialog = self.export_dialog
         self.export_dialog.open = True
         await self.page.update_async()
-    
-    async def close_dialog(self, e):
+
+    async def close_export_dialog(self, e):
         self.export_dialog.open = False
         await self.page.update_async()
 
