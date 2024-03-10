@@ -5,6 +5,7 @@ Supported mp3 sampling rate = 44.1KHz
 import flet as ft
 import os
 import numpy as np
+from datetime import datetime
 
 speech_dir= "Speech_and_Text/"
 speech_file = ''
@@ -48,6 +49,7 @@ def create_subtitles(file):
     if extension == '.ssp':
         with open(file, 'r') as h:
             for line in h.readlines():
+                print(counter)
                 # Remove '\n' at the end of each line.
                 line = line.rstrip()
                 if counter % 4 == 0:
@@ -72,6 +74,7 @@ def create_subtitles(file):
     elif extension == '.srt':
         with open(file, 'r') as h:
             for line in h.readlines():
+                print(counter)
                 # Remove '\n' at the end of each line.
                 line = line.rstrip()
                 if counter % 4 == 0:
@@ -95,7 +98,7 @@ def create_subtitles(file):
     return(subs)
 
 class SubButton(ft.UserControl):
-    def __init__(self, index, start_time, end_time, text, sub_time_clicked, play_button, save_button):
+    def __init__(self, index, start_time, end_time, text, sub_time_clicked, play_button, save_button, subtitles):
         super().__init__()
         self.index = index
         self.start_time = start_time
@@ -104,10 +107,11 @@ class SubButton(ft.UserControl):
         self.sub_time_clicked = sub_time_clicked
         self.play_button = play_button
         self.save_button = save_button
+        self.subtitles = subtitles
     
     def build(self):
         self.display_start_time = ft.TextButton(text=f"{ms_to_hhmmssnnn(int(self.start_time))}",
-                                           tooltip="Click to jump",
+                                           tooltip="Click to jump here",
                                            key=self.index,
                                            on_click=self.jump_clicked,)
         self.display_text= ft.TextButton(text=f"{self.text}", 
@@ -159,6 +163,7 @@ class SubButton(ft.UserControl):
         self.display_view.visible = True
         self.edit_view.visible = False
         self.save_button.text = '*Save'
+        self.subtitles[int(self.index)-1][3]=self.display_text.text
         await self.play_button.focus_async()
         await self.save_button.update_async()
         await self.update_async()
@@ -197,7 +202,8 @@ class AudioSubPlayer(ft.UserControl):
             icon=ft.icons.PLAY_ARROW,
             text = "Play",
             autofocus=True,
-            on_click=self.play_button_clicked
+            on_click=self.play_button_clicked,
+            disabled=True,
         )
 
         self.position_text = ft.Text(value='Current position')
@@ -217,6 +223,7 @@ class AudioSubPlayer(ft.UserControl):
             text="5 secs",
             tooltip='Rewind 5 secs',
             on_click=self.rewind_clicked,
+            disabled=True,
         )
 
         self.faster_sw = ft.Switch(
@@ -246,6 +253,7 @@ class AudioSubPlayer(ft.UserControl):
         self.speech_file_button = ft.ElevatedButton(
             text='Open Speech File', 
             icon=ft.icons.RECORD_VOICE_OVER_OUTLINED, 
+            autofocus=True,
             on_click=self.pre_pick_speech_file,
         )
 
@@ -254,14 +262,15 @@ class AudioSubPlayer(ft.UserControl):
         self.speech_file_name = ft.Text(value='← Click to open a speech file.')
 
         self.text_file_button = ft.ElevatedButton(
-            text='Open SRT/SSP File',
+            text='Open SRT/TXT File',
             icon=ft.icons.TEXT_SNIPPET_OUTLINED,
             on_click=self.pick_text_file,
+            disabled=True,
         )
         
         self.pick_text_file_dialog = ft.FilePicker(on_result=self.pick_text_file_result)
 
-        self.text_file_name = ft.Text(value='↑ Open a speech file first.')
+        self.text_file_name = ft.Text(value='No file selected.')
 
         self.export_dialog = ft.AlertDialog(
             modal = True,
@@ -269,7 +278,6 @@ class AudioSubPlayer(ft.UserControl):
             content = ft.Text('Plesae select a file type.'),
             actions = [
                 ft.TextButton('SRT', on_click=self.export_srt, tooltip='Standard subtitle format'),
-                ft.TextButton('SSP', on_click=self.export_ssp, tooltip='App original format'),
                 ft.TextButton('TXT', on_click=self.export_txt, tooltip='Subtitles text only'),
                 ft.TextButton('CSV', on_click=self.export_csv, tooltip='Comma separated value'),
                 ft.TextButton('Cancel', on_click=self.close_dialog),
@@ -281,12 +289,15 @@ class AudioSubPlayer(ft.UserControl):
             text='Save', 
             icon=ft.icons.SAVE_OUTLINED, 
             tooltip='Update current Text/SRT file',
+            disabled=True,
+            on_click=self.save_clicked
             )
         
         self.export_button = ft.ElevatedButton(
             text='Export as...', 
             icon=ft.icons.SAVE_ALT, 
             on_click=self.open_export_dialog,
+            disabled=True,
             )
 
         self.save_or_cancel_dialog = ft.AlertDialog(
@@ -305,6 +316,17 @@ class AudioSubPlayer(ft.UserControl):
         self.audio_slider.divisions = self.audio_slider.max//60
         self.subtitles = create_subtitles(self.text_file)
         self.save_button.text = 'Save'
+        self.save_button.disabled=False
+        self.export_button.disabled=False
+        self.play_button.disabled=False
+        await self.play_button.update_async()
+        self.rewind_button.disabled=False
+        self.text_file_button.disabled=False
+        self.speech_file_button.autofocus=False
+        await self.speech_file_button.update_async()
+        #self.play_button.autofocus=True
+        await self.play_button.focus_async()
+        #await self.play_button.update_async()
 
         # Extract subtitles as buttons
         self.subs_view.controls.clear()
@@ -314,7 +336,7 @@ class AudioSubPlayer(ft.UserControl):
             end_time = self.subtitles[i][2]
             text = self.subtitles[i][3]
             # Create instance
-            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button, self.save_button)
+            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button, self.save_button, self.subtitles)
             self.subs_view.controls.append(sub)
         await self.update_async()
 
@@ -421,7 +443,7 @@ class AudioSubPlayer(ft.UserControl):
         await self.pick_text_file_dialog.pick_files_async(
             dialog_title='Select a text file',
             allow_multiple=False,
-            allowed_extensions=['txt', 'srt', 'ssp'],
+            allowed_extensions=['txt', 'srt'],
             file_type=ft.FilePickerFileType.CUSTOM,
         )
     
@@ -443,8 +465,8 @@ class AudioSubPlayer(ft.UserControl):
         if os.path.exists(tmp_file+'.srt'):
             self.text_file = tmp_file+'.srt'
             self.text_file_name.value = os.path.basename(self.text_file)
-        elif os.path.exists(tmp_file+'.ssp'):
-            self.text_file = tmp_file+'.ssp'
+        elif os.path.exists(tmp_file+'.txt'):
+            self.text_file = tmp_file+'.txt'
             self.text_file_name.value = os.path.basename(self.text_file)
         else:
             self.text_file, self.text_file_name = 'No Text File.'
@@ -465,14 +487,35 @@ class AudioSubPlayer(ft.UserControl):
         await self.pick_speech_file()
 
     # Save file dialog
+    async def save_clicked(self, e):
+        print(self.subtitles)
+        print()
+        print(f'File: {self.text_file}')
+        #filename = os.path.splitext(self.text_file)[0]+datetime.now().strftime("%Y%m%d%H%M")
+        #ext = os.path.splitext(self.text_file)[1] 
+        #print(f'filename + ext = {filename+ext}')
+        #with open(filename+ext, 'w') as txt:
+        with open(self.text_file, 'w') as txt:
+            for i in self.subtitles:
+                for j in range(len(i)):
+                    if j % 4 == 0:
+                        txt.write('%s\n' % i[j])
+                    elif j % 4 == 1:
+                        start = ms_to_hhmmssnnn(int(i[j]))
+                        end = ms_to_hhmmssnnn(i[j+1])
+                        txt.write(f'{start} --> {end}\n')
+                    elif j % 4 == 3:
+                        txt.write('%s\n\n' % i[j])
+        self.save_button.text=('Save')
+        await self.update_async()
+
+
+
     async def save_file_result(self, e: ft.FilePickerResultEvent):
         self.save_file_path.value = e.path if e.path else "Cancelled!"
         await self.save_file_path.update()
     
     async def export_srt(self, e):
-        pass
-
-    async def export_ssp(self, e):
         pass
 
     async def export_txt(self, e):
@@ -505,14 +548,12 @@ class AudioSubPlayer(ft.UserControl):
                     ft.Row(controls=[
                         self.text_file_button,
                         self.text_file_name,
-                        #ft.ElevatedButton(text='Save', icon=ft.icons.SAVE_OUTLINED, tooltip='Update current Text/SRT file'),
                         self.save_button,
-                        #ft.ElevatedButton(text='Export as...', icon=ft.icons.SAVE_ALT, on_click=self.open_export_dialog),
                         self.export_button,
                     ]),
                     self.audio_slider,
                     ft.Row([
-                        ft.Text(value="00:00:00,000"),
+                        #ft.Text(value="00:00:00,000"),
                         self.position_text,
                         self.duration_text,
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
