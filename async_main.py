@@ -45,61 +45,26 @@ def create_subtitles(file):
     counter = 0
     extension = os.path.splitext(file)[1]
 
-    # Source file is ssp file format, one block consists of 4 lines: index, start_time, end_time, text
-    if extension == '.ssp':
+    # Source file is txt file which does not have timestamps.
+    if extension == '.txt':
         with open(file, 'r') as h:
+            index = 1
             for line in h.readlines():
-                print(counter)
+                #print(counter)
                 # Remove '\n' at the end of each line.
                 line = line.rstrip()
-                if counter % 4 == 0:
-                    # Index
-                    sub = sub + [line]
-                    counter += 1
-                elif counter % 4 == 1:
-                    # Start time
-                    sub = sub + [line.zfill(8)]
-                    counter += 1
-                elif counter % 4 == 2:
-                    # End time
-                    sub = sub + [int(line)]
-                    counter += 1
-                else:
-                    # Text
-                    sub = sub + [line]
-                    subs.append(sub)
-                    sub = []
-                    counter += 1
+                sub = sub + [index]
+                sub = sub + ['00:00:00,000']
+                sub = sub + [0]
+                sub = sub + [line]
+                subs.append(sub)
+                counter += 1
     # Source file is srt file format, one block consists of 4 lines: index, start_time --> end_time, text, empty line
-    elif extension == '.txt':
-        with open(file, 'r') as h:
-            for line in h.readlines():
-                print(counter)
-                # Remove '\n' at the end of each line.
-                line = line.rstrip()
-                if counter % 4 == 0:
-                    # Index
-                    sub = sub + [line]
-                    counter += 1
-                elif counter % 4 == 1:
-                    # Start time and End time
-                    start_time, end_time = line.split(' --> ')
-                    sub = sub + [str(hhmmssnnn_to_ms(start_time)).zfill(8)]
-                    sub = sub + [hhmmssnnn_to_ms(end_time)]
-                    counter += 1
-                elif counter %4 == 2:
-                    # Text
-                    sub = sub + [line]
-                    counter += 1
-                else:
-                    subs.append(sub)
-                    sub = []
-                    counter += 1
     elif extension == '.srt':
         with open(file, 'r') as h:
             index = 1
             for line in h.readlines():
-                print(counter)
+                #print(counter)
                 # Remove '\n' at the end of each line.
                 line = line.rstrip()
                 if counter % 4 == 0:
@@ -307,13 +272,16 @@ class AudioSubPlayer(ft.UserControl):
             title = ft.Text('Export text as...'),
             content = ft.Text('Plesae select a file type.'),
             actions = [
-                ft.TextButton('SRT', on_click=self.export_srt, tooltip='Subtitles with timestamps'),
+                ft.TextButton('SRT', on_click=self.export_as_srt, tooltip='Subtitles with timestamps',
+                              disabled=(os.path.splitext(self.text_file)[1]=='.srt')),
                 ft.TextButton('TXT', on_click=self.export_txt, tooltip='Subtitles without timestamps'),
                 ft.TextButton('CSV', on_click=self.export_csv, tooltip='Comma separated value'),
                 ft.TextButton('Cancel', on_click=self.close_export_dialog),
             ],
             actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
+        
+        self.export_as_srt_dialog = ft.FilePicker(on_result=self.export_as_srt_result)
         
         self.save_button = ft.ElevatedButton(
             text='Save', 
@@ -533,13 +501,15 @@ class AudioSubPlayer(ft.UserControl):
 
     # Save file dialog
     async def save_clicked(self, e):
-        print(self.subtitles)
-        print()
+        #print(self.subtitles)
+        #print()
         print(f'File: {self.text_file}')
+        print(f'Extension: {os.path.splitext(self.text_file)[1]}')
         #filename = os.path.splitext(self.text_file)[0]+datetime.now().strftime("%Y%m%d%H%M")
         #ext = os.path.splitext(self.text_file)[1] 
         #print(f'filename + ext = {filename+ext}')
         #with open(filename+ext, 'w') as txt:
+        '''
         with open(self.text_file, 'w') as txt:
             for i in self.subtitles:
                 for j in range(len(i)):
@@ -551,6 +521,8 @@ class AudioSubPlayer(ft.UserControl):
                         txt.write(f'{start} --> {end}\n')
                     elif j % 4 == 3:
                         txt.write('%s\n\n' % i[j])
+        '''
+        await self.save_as_srt(self.text_file)
         self.save_button.text=('Save')
         await self.update_async()
 
@@ -564,8 +536,42 @@ class AudioSubPlayer(ft.UserControl):
         await self.update_async()
         await self.pick_speech_file()
     '''
-    async def export_srt(self, e):
-        pass
+    async def export_as_srt(self, e):
+        if os.path.splitext(self.text_file)[1] == '.srt':
+            #suggested_file_name = os.path.splitext(self.text_file)[0]+datetime.now().strftime("%Y%m%d%H%M")+'.srt'
+            suggested_file_name = os.path.basename(self.text_file).split('.', 1)[0]+'_'+datetime.now().strftime("%Y%m%d%H%M")+'.srt'
+        await self.export_as_srt_dialog.save_file_async(
+            dialog_title='Export as an SRT file',
+            allowed_extensions=['srt'],
+            initial_directory=os.path.dirname(text_file),
+            file_name = suggested_file_name,
+            file_type=ft.FilePickerFileType.CUSTOM,
+        )
+
+    #async def export_as_srt_result(self, e: ft.FilePickerResultEvent):
+    async def export_as_srt_result(self, e: ft.FilePicker.result):
+        self.export_dialog.open = False
+        await self.page.update_async()
+        if e.path:
+            print(f'e.path= {e.path}')
+            print(f'Filename = {os.path.basename(e.path)}')
+            await self.save_as_srt(e.path)
+            
+    # Save as .srt file
+    async def save_as_srt(self, save_file_name):
+        with open(save_file_name, 'w') as txt:
+            for i in self.subtitles:
+                for j in range(len(i)):
+                    if j % 4 == 0:
+                        txt.write('%s\n' % i[j])
+                    elif j % 4 == 1:
+                        start = ms_to_hhmmssnnn(int(i[j]))
+                        end = ms_to_hhmmssnnn(i[j+1])
+                        txt.write(f'{start} --> {end}\n')
+                    elif j % 4 == 3:
+                        txt.write('%s\n\n' % i[j]) 
+
+
 
     async def export_txt(self, e):
         pass
@@ -580,6 +586,10 @@ class AudioSubPlayer(ft.UserControl):
 
     async def close_export_dialog(self, e):
         self.export_dialog.open = False
+        await self.page.update_async()
+    
+    async def close_overwrite_dialog(self, e):
+        self.overwrite_dialog.open = False
         await self.page.update_async()
 
     # *** BUILD METHOD ***
@@ -642,7 +652,7 @@ async def main(page: ft.Page):
     app = AudioSubPlayer(speech_dir, speech_file, text_dir, text_file, load_audio)
     
     await page.add_async(app)
-    page.overlay.extend([app.pick_speech_file_dialog, app.pick_text_file_dialog, app.save_file_dialog])
+    page.overlay.extend([app.pick_speech_file_dialog, app.pick_text_file_dialog, app.save_file_dialog, app.export_as_srt_dialog])
     #page.overlay.append(app.audio1)
     await page.update_async()
 
