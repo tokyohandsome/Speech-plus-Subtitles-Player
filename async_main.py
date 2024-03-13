@@ -54,11 +54,12 @@ def create_subtitles(file):
                 # Remove '\n' at the end of each line.
                 line = line.rstrip()
                 sub = sub + [index]
-                sub = sub + ['00:00:00,000']
+                sub = sub + [201355555]
                 sub = sub + [0]
                 sub = sub + [line]
                 subs.append(sub)
-                counter += 1
+                sub = []
+                index += 1
     # Source file is srt file format, one block consists of 4 lines: index, start_time --> end_time, text, empty line
     elif extension == '.srt':
         with open(file, 'r') as h:
@@ -107,6 +108,7 @@ class SubButton(ft.UserControl):
     def build(self):
         self.display_start_time = ft.TextButton(text=f"{ms_to_hhmmssnnn(int(self.start_time))}",
                                            tooltip="Click to jump here",
+                                           disabled=(self.start_time==201355555),
                                            key=self.index,
                                            on_click=self.jump_clicked,)
         self.display_text= ft.TextButton(text=f"{self.text}", 
@@ -274,7 +276,7 @@ class AudioSubPlayer(ft.UserControl):
             actions = [
                 ft.TextButton('SRT', on_click=self.export_as_srt, tooltip='Subtitles with timestamps',
                               disabled=(os.path.splitext(self.text_file)[1]=='.srt')),
-                ft.TextButton('TXT', on_click=self.export_txt, tooltip='Subtitles without timestamps'),
+                ft.TextButton('TXT', on_click=self.export_as_txt, tooltip='Subtitles without timestamps'),
                 ft.TextButton('CSV', on_click=self.export_csv, tooltip='Comma separated value'),
                 ft.TextButton('Cancel', on_click=self.close_export_dialog),
             ],
@@ -283,6 +285,8 @@ class AudioSubPlayer(ft.UserControl):
         
         self.export_as_srt_dialog = ft.FilePicker(on_result=self.export_as_srt_result)
         
+        self.export_as_txt_dialog = ft.FilePicker(on_result=self.export_as_txt_result)
+
         self.save_button = ft.ElevatedButton(
             text='Save', 
             icon=ft.icons.SAVE_OUTLINED, 
@@ -331,6 +335,14 @@ class AudioSubPlayer(ft.UserControl):
         for i in range(len(self.subtitles)):
             index = self.subtitles[i][0]
             start_time = self.subtitles[i][1]
+            #if index == 1 and start_time == 999999999:
+            if self.subtitles[0][1]== 201355555:
+                self.sub_scroller_sw.value=False
+                self.sub_scroller_sw.disabled=True
+            else:
+                self.sub_scroller_sw.value=True
+                self.sub_scroller_sw.disabled=False
+            await self.sub_scroller_sw.update_async()
             end_time = self.subtitles[i][2]
             text = self.subtitles[i][3]
             # Create instance
@@ -504,7 +516,8 @@ class AudioSubPlayer(ft.UserControl):
         #print(self.subtitles)
         #print()
         print(f'File: {self.text_file}')
-        print(f'Extension: {os.path.splitext(self.text_file)[1]}')
+        extension = os.path.splitext(self.text_file)[1]
+        print(f'Extension: {extension}')
         #filename = os.path.splitext(self.text_file)[0]+datetime.now().strftime("%Y%m%d%H%M")
         #ext = os.path.splitext(self.text_file)[1] 
         #print(f'filename + ext = {filename+ext}')
@@ -522,7 +535,10 @@ class AudioSubPlayer(ft.UserControl):
                     elif j % 4 == 3:
                         txt.write('%s\n\n' % i[j])
         '''
-        await self.save_as_srt(self.text_file)
+        if extension == '.srt':
+            await self.save_as_srt(self.text_file)
+        elif extension == '.txt':
+            await self.save_as_txt(self.text_file)
         self.save_button.text=('Save')
         await self.update_async()
 
@@ -557,24 +573,48 @@ class AudioSubPlayer(ft.UserControl):
             print(f'Filename = {os.path.basename(e.path)}')
             await self.save_as_srt(e.path)
             
+    async def export_as_txt(self, e):
+        if os.path.exists(os.path.splitext(self.text_file)[0]+'.txt'):
+            suggested_file_name = os.path.basename(self.text_file).split('.', 1)[0]+'_'+datetime.now().strftime("%Y%m%d%H%M")+'.txt'
+        else:
+            suggested_file_name = os.path.basename(self.text_file).split('.', 1)[0]+'.txt'
+        await self.export_as_txt_dialog.save_file_async(
+            dialog_title='Export as a TXT file',
+            allowed_extensions=['txt'],
+            initial_directory=os.path.dirname(text_file),
+            file_name = suggested_file_name,
+            file_type=ft.FilePickerFileType.CUSTOM,
+        )
+
+    async def export_as_txt_result(self, e: ft.FilePicker.result):
+        self.export_dialog.open = False
+        await self.page.update_async()
+        if e.path:
+            print(f'e.path= {e.path}')
+            print(f'Filename = {os.path.basename(e.path)}')
+            await self.save_as_txt(e.path)
+            
     # Save as .srt file
     async def save_as_srt(self, save_file_name):
-        with open(save_file_name, 'w') as txt:
+        with open(save_file_name, 'w') as srt:
             for i in self.subtitles:
                 for j in range(len(i)):
                     if j % 4 == 0:
-                        txt.write('%s\n' % i[j])
+                        srt.write('%s\n' % i[j])
                     elif j % 4 == 1:
                         start = ms_to_hhmmssnnn(int(i[j]))
                         end = ms_to_hhmmssnnn(i[j+1])
-                        txt.write(f'{start} --> {end}\n')
+                        srt.write(f'{start} --> {end}\n')
                     elif j % 4 == 3:
-                        txt.write('%s\n\n' % i[j]) 
+                        srt.write('%s\n\n' % i[j]) 
 
-
-
-    async def export_txt(self, e):
-        pass
+    # Save as .txt file
+    async def save_as_txt(self, save_file_name):
+        with open(save_file_name, 'w') as txt:
+            for i in self.subtitles:
+                for j in range(len(i)):
+                    if j % 4 == 3:
+                        txt.write('%s\n' % i[j]) 
 
     async def export_csv(self, e):
         pass
@@ -652,7 +692,8 @@ async def main(page: ft.Page):
     app = AudioSubPlayer(speech_dir, speech_file, text_dir, text_file, load_audio)
     
     await page.add_async(app)
-    page.overlay.extend([app.pick_speech_file_dialog, app.pick_text_file_dialog, app.save_file_dialog, app.export_as_srt_dialog])
+    page.overlay.extend([app.pick_speech_file_dialog, app.pick_text_file_dialog, app.save_file_dialog, 
+                         app.export_as_srt_dialog, app.export_as_txt_dialog])
     #page.overlay.append(app.audio1)
     await page.update_async()
 
