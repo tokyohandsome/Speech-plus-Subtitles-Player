@@ -149,11 +149,11 @@ class SubButton(ft.UserControl):
 
     async def edit_clicked(self, e):
         self.edit_text.value = self.display_text.text
-        await self.edit_text.focus_async()
+        self.edit_text.focus()
         self.display_view.visible = False
         self.edit_view.visible = True
         self.edit_text.on_submit = self.save_clicked
-        await self.update_async()
+        self.update()
 
     async def save_clicked(self, e):
         self.display_text.text= self.edit_text.value
@@ -161,15 +161,15 @@ class SubButton(ft.UserControl):
         self.edit_view.visible = False
         self.save_button.text = '*Save'
         self.subtitles[int(self.index)-1][3]=self.display_text.text
-        await self.play_button.focus_async()
-        await self.save_button.update_async()
-        await self.update_async()
+        self.play_button.focus()
+        self.save_button.update()
+        self.update()
 
     async def cancel_clicked(self, e):
         self.display_view.visible = True
         self.edit_view.visible = False
-        await self.play_button.focus_async()
-        await self.update_async()
+        self.play_button.focus()
+        self.update()
 
     async def jump_clicked(self, e):
         await self.sub_time_clicked(self.start_time)
@@ -275,9 +275,9 @@ class AudioSubPlayer(ft.UserControl):
             content = ft.Text('Plesae select a file type.'),
             actions = [
                 ft.TextButton('SRT', on_click=self.export_as_srt, tooltip='Subtitles with timestamps',
-                              disabled=(os.path.splitext(self.text_file)[1]=='.srt')),
-                ft.TextButton('TXT', on_click=self.export_as_txt, tooltip='Subtitles without timestamps'),
-                ft.TextButton('CSV', on_click=self.export_csv, tooltip='Comma separated value'),
+                              disabled=(os.path.splitext(self.text_file)[1]=='.txt')),
+                ft.TextButton('TXT', on_click=self.export_as_txt, tooltip='Subtitles only (no timestamps)'),
+                #ft.TextButton('CSV', on_click=self.export_csv, tooltip='Comma separated value'),
                 ft.TextButton('Cancel', on_click=self.close_export_dialog),
             ],
             actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -312,6 +312,13 @@ class AudioSubPlayer(ft.UserControl):
                 ft.TextButton('Cancel', on_click=self.close_save_or_cancel_dialog),
             ]
         )
+
+        self.notification_bar=ft.SnackBar(
+            content=ft.Text('Speech + Subtitle Player'),
+            duration=2000,
+            bgcolor=ft.colors.BLUE_GREY_700,
+        )
+
     async def loaded(self, e):
         self.audio_slider.max = int(await self.audio1.get_duration_async())
         self.duration_text.value = f'{ms_to_hhmmssnnn(self.audio_slider.max)}'
@@ -321,28 +328,28 @@ class AudioSubPlayer(ft.UserControl):
         self.save_button.disabled=False
         self.export_button.disabled=False
         self.play_button.disabled=False
-        await self.play_button.update_async()
+        self.play_button.update()
         self.rewind_button.disabled=False
         self.text_file_button.disabled=False
         self.speech_file_button.autofocus=False
-        await self.speech_file_button.update_async()
-        #self.play_button.autofocus=True
-        await self.play_button.focus_async()
-        #await self.play_button.update_async()
+        self.speech_file_button.update()
+        self.play_button.focus()
+        self.notification_bar.content=ft.Text('Speech file loaded.', color=ft.colors.LIGHT_BLUE_ACCENT_400)
+        self.notification_bar.bgcolor=ft.colors.BLUE_GREY_700
+        self.notification_bar.open=True
 
         # Extract subtitles as buttons
         self.subs_view.controls.clear()
         for i in range(len(self.subtitles)):
             index = self.subtitles[i][0]
             start_time = self.subtitles[i][1]
-            #if index == 1 and start_time == 999999999:
             if self.subtitles[0][1]== 201355555:
                 self.sub_scroller_sw.value=False
                 self.sub_scroller_sw.disabled=True
             else:
                 self.sub_scroller_sw.value=True
                 self.sub_scroller_sw.disabled=False
-            await self.sub_scroller_sw.update_async()
+            self.sub_scroller_sw.update()
             end_time = self.subtitles[i][2]
             text = self.subtitles[i][3]
             # Create instance
@@ -363,7 +370,7 @@ class AudioSubPlayer(ft.UserControl):
                             self.save_button, self.subtitles)
             self.subs_view.controls.append(sub)
             '''
-        await self.update_async()
+        self.update()
 
     async def position_changed(self, e):
         self.audio_slider.value = e.data
@@ -371,48 +378,48 @@ class AudioSubPlayer(ft.UserControl):
         self.position_text.value = ms_to_hhmmssnnn(int(e.data))
         if self.sub_scroller_sw.value == True:
             await self.scroll_to(self.audio_slider.value)
-        await self.update_async()
+        self.update()
 
     async def slider_changed(self, e):
-        await self.audio1.seek_async(int(self.audio_slider.value))
+        self.audio1.seek(int(self.audio_slider.value))
         print(int(self.audio_slider.value))
-        await self.update_async()
+        self.update()
 
     async def play_button_clicked(self, e):
         self.position = await self.audio1.get_current_position_async()
         #print("Position:", page.position)
         if (self.isPlaying == False) and (self.position == 0):
-            await self.audio1.play_async()
+            self.audio1.play()
             self.isPlaying = True
             self.play_button.icon=ft.icons.PAUSE
             self.play_button.text = "Playing"
         elif self.isPlaying == False:
-            await self.audio1.resume_async()
+            self.audio1.resume()
             self.isPlaying = True
             self.play_button.icon=ft.icons.PAUSE
             self.play_button.text = "Playing"
         else:
-            await self.audio1.pause_async()
+            self.audio1.pause()
             self.isPlaying = False
             self.play_button.icon=ft.icons.PLAY_ARROW
             self.play_button.text = "Paused"
-        await self.update_async()
+        self.update()
     
     async def playback_completed(self, e):
         if e.data == "completed":
             self.isPlaying = False 
             self.play_button.icon=ft.icons.PLAY_ARROW
             self.play_button.text = "Play"
-        await self.update_async()
+        self.update()
     
     async def rewind_clicked(self, e):
         if self.audio_slider.value <= 5*1000:
             self.audio_slider.value = 0
         else:
             self.audio_slider.value -= 5*1000
-        await self.audio1.seek_async(int(self.audio_slider.value))
+        self.audio1.seek(int(self.audio_slider.value))
         print(int(self.audio_slider.value))
-        await self.update_async()
+        self.update()
     
     async def playback_rate(self, e):
         if self.faster_sw.value == True:
@@ -423,25 +430,25 @@ class AudioSubPlayer(ft.UserControl):
         await self.audio1.update_async()
 
     async def sub_time_clicked(self, start_time):
-        await self.audio1.seek_async(int(start_time))
-        await self.update_async()
+        self.audio1.seek(int(start_time))
+        self.update()
     
     async def scroll_to(self, e):
         end_time = [item[2] for item in self.subtitles]
         index = np.argmin(np.abs(np.array(end_time) - e))
         key=str(self.subtitles[index][0])
-        await self.subs_view.scroll_to_async(key=key, duration =1000)
-        await self.update_async()
+        self.subs_view.scroll_to(key=key, duration =1000)
+        self.update()
     
     async def pre_pick_speech_file(self, e):
         if self.save_button.text == '*Save':
             print('Save is not done.')
-            await self.save_or_cancel()
+            self.save_or_cancel()
         else:
             await self.pick_speech_file()
     
     async def pick_speech_file(self):
-        await self.pick_speech_file_dialog.pick_files_async(
+        self.pick_speech_file_dialog.pick_files(
             dialog_title='Select a speech (audio) file',
             allow_multiple=False,
             allowed_extensions=['mp3', 'm4a', 'wav', 'mp4', 'aiff', 'aac'],
@@ -459,14 +466,14 @@ class AudioSubPlayer(ft.UserControl):
             self.audio1.src = self.speech_file
             self.base_dir.value=f"Directory: {os.path.dirname(self.speech_file)}"
             await self.check_text_file()
-            #await self.speech_file_name.update_async()
-            #await self.audio1.update_async()
-            await self.update_async()
+            #await self.speech_file_name.update()
+            #await self.audio1.update()
+            self.update()
             await self.load_audio()
     
     async def pick_text_file(self, e):
-        await self.pick_text_file_dialog.pick_files_async(
-            dialog_title='Select a text file',
+        self.pick_text_file_dialog.pick_files(
+            dialog_title='Select a subtitle file',
             allow_multiple=False,
             allowed_extensions=['txt', 'srt'],
             file_type=ft.FilePickerFileType.CUSTOM,
@@ -480,7 +487,7 @@ class AudioSubPlayer(ft.UserControl):
             self.text_file = ''.join(map(lambda f: f.path, e.files))
             print(f'Full path= {self.text_file}')
             #await self.check_text_file()
-            await self.update_async()
+            self.update()
             await self.load_audio()
 
     async def check_text_file(self):
@@ -500,16 +507,16 @@ class AudioSubPlayer(ft.UserControl):
     async def save_or_cancel(self):
         self.page.dialog = self.save_or_cancel_dialog
         self.save_or_cancel_dialog.open = True
-        await self.page.update_async()
+        self.page.update()
     
     async def close_save_or_cancel_dialog(self, e):
         self.save_or_cancel_dialog.open = False
-        await self.page.update_async()
+        self.page.update()
     
     async def open_without_save(self, e):
         self.save_or_cancel_dialog.open = False
-        await self.page.update_async()
-        await self.pick_speech_file()
+        self.page.update()
+        self.pick_speech_file()
 
     # Save file dialog
     async def save_clicked(self, e):
@@ -540,23 +547,23 @@ class AudioSubPlayer(ft.UserControl):
         elif extension == '.txt':
             await self.save_as_txt(self.text_file)
         self.save_button.text=('Save')
-        await self.update_async()
+        self.update()
 
     async def save_file_result(self, e: ft.FilePickerResultEvent):
         self.save_file_path.value = e.path if e.path else "Cancelled!"
-        await self.save_file_path.update()
+        self.save_file_path.update()
     '''
     async def save_then_open(self):
         await self.close_save_or_cancel_dialog()
         await self.save_clicked()
-        await self.update_async()
+        await self.update()
         await self.pick_speech_file()
     '''
     async def export_as_srt(self, e):
         if os.path.splitext(self.text_file)[1] == '.srt':
             #suggested_file_name = os.path.splitext(self.text_file)[0]+datetime.now().strftime("%Y%m%d%H%M")+'.srt'
             suggested_file_name = os.path.basename(self.text_file).split('.', 1)[0]+'_'+datetime.now().strftime("%Y%m%d%H%M")+'.srt'
-        await self.export_as_srt_dialog.save_file_async(
+        self.export_as_srt_dialog.save_file(
             dialog_title='Export as an SRT file',
             allowed_extensions=['srt'],
             initial_directory=os.path.dirname(text_file),
@@ -564,13 +571,14 @@ class AudioSubPlayer(ft.UserControl):
             file_type=ft.FilePickerFileType.CUSTOM,
         )
 
-    #async def export_as_srt_result(self, e: ft.FilePickerResultEvent):
     async def export_as_srt_result(self, e: ft.FilePicker.result):
         self.export_dialog.open = False
-        await self.page.update_async()
+        self.export_dialog.update()
+        #self.page.update()
+        #self.update()
         if e.path:
-            print(f'e.path= {e.path}')
-            print(f'Filename = {os.path.basename(e.path)}')
+            #print(f'e.path= {e.path}')
+            #print(f'Filename = {os.path.basename(e.path)}')
             await self.save_as_srt(e.path)
             
     async def export_as_txt(self, e):
@@ -578,7 +586,7 @@ class AudioSubPlayer(ft.UserControl):
             suggested_file_name = os.path.basename(self.text_file).split('.', 1)[0]+'_'+datetime.now().strftime("%Y%m%d%H%M")+'.txt'
         else:
             suggested_file_name = os.path.basename(self.text_file).split('.', 1)[0]+'.txt'
-        await self.export_as_txt_dialog.save_file_async(
+        self.export_as_txt_dialog.save_file(
             dialog_title='Export as a TXT file',
             allowed_extensions=['txt'],
             initial_directory=os.path.dirname(text_file),
@@ -588,10 +596,12 @@ class AudioSubPlayer(ft.UserControl):
 
     async def export_as_txt_result(self, e: ft.FilePicker.result):
         self.export_dialog.open = False
-        await self.page.update_async()
+        self.export_dialog.update()
+        #self.page.update()
+        #self.update()
         if e.path:
-            print(f'e.path= {e.path}')
-            print(f'Filename = {os.path.basename(e.path)}')
+            #print(f'e.path= {e.path}')
+            #print(f'Filename = {os.path.basename(e.path)}')
             await self.save_as_txt(e.path)
             
     # Save as .srt file
@@ -607,6 +617,10 @@ class AudioSubPlayer(ft.UserControl):
                         srt.write(f'{start} --> {end}\n')
                     elif j % 4 == 3:
                         srt.write('%s\n\n' % i[j]) 
+        self.notification_bar.content=ft.Text(f'Saved {os.path.basename(save_file_name)}.', color=ft.colors.LIGHT_BLUE_ACCENT_400)
+        self.notification_bar.bgcolor=ft.colors.BLUE_GREY_700
+        self.notification_bar.open=True
+        self.update()
 
     # Save as .txt file
     async def save_as_txt(self, save_file_name):
@@ -615,6 +629,10 @@ class AudioSubPlayer(ft.UserControl):
                 for j in range(len(i)):
                     if j % 4 == 3:
                         txt.write('%s\n' % i[j]) 
+        self.notification_bar.content=ft.Text(f'Saved {os.path.basename(save_file_name)}.', color=ft.colors.LIGHT_BLUE_ACCENT_400)
+        self.notification_bar.bgcolor=ft.colors.BLUE_GREY_700
+        self.notification_bar.open=True
+        self.update()
 
     async def export_csv(self, e):
         pass
@@ -622,15 +640,15 @@ class AudioSubPlayer(ft.UserControl):
     async def open_export_dialog(self, e):
         self.page.dialog = self.export_dialog
         self.export_dialog.open = True
-        await self.page.update_async()
+        self.page.update()
 
     async def close_export_dialog(self, e):
         self.export_dialog.open = False
-        await self.page.update_async()
+        self.page.update()
     
     async def close_overwrite_dialog(self, e):
         self.overwrite_dialog.open = False
-        await self.page.update_async()
+        self.page.update()
 
     # *** BUILD METHOD ***
     def build(self):
@@ -672,8 +690,11 @@ class AudioSubPlayer(ft.UserControl):
                 border=ft.border.all(1),
                 #expand=False,
                 padding=5,
+            ),
+            ft.Container(content=
+                self.notification_bar)
+            ],
             )
-            ])
         
         #return ft.Column(expand=True, controls=self.view)
         return self.view
@@ -681,21 +702,21 @@ class AudioSubPlayer(ft.UserControl):
 async def main(page: ft.Page):
     page.title = 'Speech + Subtitle Player'
     page.window_height = 800
-    await page.update_async()
+    page.update()
 
     async def load_audio():
         page.overlay.append(app.audio1)
         print(f'app.audio1 = {app.audio1}')
         print('Load audio file and update page.')
-        await page.update_async()
+        page.update()
 
     app = AudioSubPlayer(speech_dir, speech_file, text_dir, text_file, load_audio)
     
-    await page.add_async(app)
+    page.add(app)
     page.overlay.extend([app.pick_speech_file_dialog, app.pick_text_file_dialog, app.save_file_dialog, 
                          app.export_as_srt_dialog, app.export_as_txt_dialog])
     #page.overlay.append(app.audio1)
-    await page.update_async()
+    page.update()
 
 
 ft.app(target=main, assets_dir="assets")
