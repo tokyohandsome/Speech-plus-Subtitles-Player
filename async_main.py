@@ -508,7 +508,6 @@ class AudioSubPlayer(ft.UserControl):
             print(f'File name= {self.text_file}, type = {type(self.text_file)}')
             self.text_file = ''.join(map(lambda f: f.path, e.files))
             print(f'Full path= {self.text_file}')
-            await self.check_text_file()
             self.update()
             await self.load_audio()
 

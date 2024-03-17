@@ -2,4 +2,4 @@
 **/__pycache__/**
 /build/
 /examples/
-/Speech_and_Text/
+**/Speech_and_Text/**
