@@ -107,9 +107,9 @@ class SubButton(ft.UserControl):
     
     def build(self):
         self.display_start_time = ft.TextButton(text=f"{ms_to_hhmmssnnn(int(self.start_time))}",
-                                           tooltip="Click to jump here",
                                            disabled=(self.start_time==201355555),
                                            key=self.index,
+                                           width=130,
                                            on_click=self.jump_clicked,)
         self.display_text= ft.TextButton(text=f"{self.text}", 
                                          on_click=self.edit_clicked, 
@@ -121,12 +121,18 @@ class SubButton(ft.UserControl):
             alignment=ft.MainAxisAlignment.START,
             #vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Text(value=self.index),
+                ft.Text(value=self.index, width=30),
                 self.display_start_time,
                 self.display_text,
                 #ft.Row(spacing=0, controls=[ft.IconButton(ft.icons.PLAY_ARROW_OUTLINED,)])
             ]
         )
+
+        if self.start_time==201355555:
+            self.display_start_time.tooltip='Jump not available'
+        else:
+            self.display_start_time.tooltip='Click to jump here'
+        
         self.edit_view = ft.Row(
             visible=False,
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -251,6 +257,7 @@ class AudioSubPlayer(ft.UserControl):
             text='Open Speech File', 
             icon=ft.icons.RECORD_VOICE_OVER_OUTLINED, 
             autofocus=True,
+            width=210,
             on_click=self.pre_pick_speech_file,
         )
 
@@ -263,6 +270,7 @@ class AudioSubPlayer(ft.UserControl):
             icon=ft.icons.TEXT_SNIPPET_OUTLINED,
             on_click=self.pick_text_file,
             disabled=True,
+            width=210,
         )
         
         self.pick_text_file_dialog = ft.FilePicker(on_result=self.pick_text_file_result)
@@ -274,8 +282,7 @@ class AudioSubPlayer(ft.UserControl):
             title = ft.Text('Export text as...'),
             content = ft.Text('Plesae select a file type.'),
             actions = [
-                ft.TextButton('SRT', on_click=self.export_as_srt, tooltip='Subtitles with timestamps',
-                              disabled=(os.path.splitext(self.text_file)[1]=='.txt')),
+                ft.TextButton('SRT', on_click=self.export_as_srt, tooltip='Subtitles with timestamps'),
                 ft.TextButton('TXT', on_click=self.export_as_txt, tooltip='Subtitles only (no timestamps)'),
                 #ft.TextButton('CSV', on_click=self.export_csv, tooltip='Comma separated value'),
                 ft.TextButton('Cancel', on_click=self.close_export_dialog),
@@ -323,10 +330,15 @@ class AudioSubPlayer(ft.UserControl):
         self.audio_slider.max = int(await self.audio1.get_duration_async())
         self.duration_text.value = f'{ms_to_hhmmssnnn(self.audio_slider.max)}'
         self.audio_slider.divisions = self.audio_slider.max//60
-        self.subtitles = create_subtitles(self.text_file)
-        self.save_button.text = 'Save'
-        self.save_button.disabled=False
-        self.export_button.disabled=False
+        if self.text_file != 'No Text File.':
+            self.subtitles = create_subtitles(self.text_file)
+            self.save_button.text = 'Save'
+            self.save_button.disabled=False
+            self.export_button.disabled=False
+        else:
+            self.save_button.disabled=True
+            self.export_button.disabled=True
+            self.subtitles = []
         self.play_button.disabled=False
         self.play_button.update()
         self.rewind_button.disabled=False
@@ -334,49 +346,55 @@ class AudioSubPlayer(ft.UserControl):
         self.speech_file_button.autofocus=False
         self.speech_file_button.update()
         self.play_button.focus()
-        self.notification_bar.content=ft.Text('Speech file loaded.', color=ft.colors.LIGHT_BLUE_ACCENT_400)
-        self.notification_bar.bgcolor=ft.colors.BLUE_GREY_700
-        self.notification_bar.open=True
+        
+        # Disable export as srt if subtitle is text file which does not have timestamps.
+        #self.export_dialog.actions[0].disabled=os.path.splitext(self.text_file)[1]=='.txt'
 
-        # Extract subtitles as buttons
+        # Extract subtitles as buttons if subtitle .srt or .txt file exists.
         self.subs_view.controls.clear()
-        for i in range(len(self.subtitles)):
-            index = self.subtitles[i][0]
-            start_time = self.subtitles[i][1]
-            if self.subtitles[0][1]== 201355555:
-                self.sub_scroller_sw.value=False
-                self.sub_scroller_sw.disabled=True
-            else:
-                self.sub_scroller_sw.value=True
-                self.sub_scroller_sw.disabled=False
-            self.sub_scroller_sw.update()
-            end_time = self.subtitles[i][2]
-            text = self.subtitles[i][3]
-            # Create instance
-            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button, 
-                            self.save_button, self.subtitles)
-            self.subs_view.controls.append(sub)
-        '''
-        index = 0
-        for i in range(len(self.subtitles)):
-            text = self.subtitles[i][3]
-            if text =='':
-                continue
-            index += 1
-            start_time = self.subtitles[i][1]
-            end_time = self.subtitles[i][2]
-            # Create instance
-            sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button, 
-                            self.save_button, self.subtitles)
-            self.subs_view.controls.append(sub)
+        #if self.text_file_name.value != 'No Text File.':
+        if self.subtitles != []:
+            # .txt or .srt file
+            for i in range(len(self.subtitles)):
+                index = self.subtitles[i][0]
+                start_time = self.subtitles[i][1]
+                # .txt file
+                if self.subtitles[0][1]== 201355555:
+                    self.sub_scroller_sw.value=False
+                    self.sub_scroller_sw.disabled=True
+                    self.export_dialog.actions[0].disabled=True
+                # .srt file
+                else:
+                    self.sub_scroller_sw.value=True
+                    self.sub_scroller_sw.disabled=False
+                self.sub_scroller_sw.update()
+                end_time = self.subtitles[i][2]
+                text = self.subtitles[i][3]
+                # Create instance
+                sub = SubButton(index, start_time, end_time, text, self.sub_time_clicked, self.play_button, 
+                                self.save_button, self.subtitles)
+                self.subs_view.controls.append(sub)
+            notification = f'Subtitle file loaded: {os.path.basename(self.text_file)}'
+            await self.open_notification_bar(notification)
+            print('Subtitle buttons created')
+        # No text file found.
+        else:
             '''
+            self.save_button.disabled=True
+            self.export_button.disabled=True
+            self.text_file_name=text_file
+            '''
+            notification = f'Subtitle file (.srt or .txt) not found.'
+            await self.open_notification_bar(notification, type='error')
+            print('Subtitle file not found.')
+
         self.update()
 
     async def position_changed(self, e):
         self.audio_slider.value = e.data
         print("Position:", self.audio_slider.value)
         self.position_text.value = ms_to_hhmmssnnn(int(e.data))
-        if self.sub_scroller_sw.value == True:
+        if (self.sub_scroller_sw.value == True) and (self.text_file_name.value != 'No Text File.'):
             await self.scroll_to(self.audio_slider.value)
         self.update()
 
@@ -441,6 +459,8 @@ class AudioSubPlayer(ft.UserControl):
         self.update()
     
     async def pre_pick_speech_file(self, e):
+        if self.isPlaying == True:
+            await self.play_button_clicked(e)
         if self.save_button.text == '*Save':
             print('Save is not done.')
             self.save_or_cancel()
@@ -460,7 +480,7 @@ class AudioSubPlayer(ft.UserControl):
             print(f'e.files = {e.files}')
             #print(f'type(e.files) = {type(e.files)}')
             self.speech_file_name.value = ''.join(map(lambda f: f.name, e.files))
-            print(f'File name= {self.speech_file}, type = {type(self.speech_file)}')
+            #print(f'File name= {self.speech_file}, type = {type(self.speech_file)}')
             self.speech_file = ''.join(map(lambda f: f.path, e.files))
             print(f'Full path= {self.speech_file}')
             self.audio1.src = self.speech_file
@@ -472,6 +492,8 @@ class AudioSubPlayer(ft.UserControl):
             await self.load_audio()
     
     async def pick_text_file(self, e):
+        if self.isPlaying == True:
+            await self.play_button_clicked(e)
         self.pick_text_file_dialog.pick_files(
             dialog_title='Select a subtitle file',
             allow_multiple=False,
@@ -486,13 +508,13 @@ class AudioSubPlayer(ft.UserControl):
             print(f'File name= {self.text_file}, type = {type(self.text_file)}')
             self.text_file = ''.join(map(lambda f: f.path, e.files))
             print(f'Full path= {self.text_file}')
-            #await self.check_text_file()
+            await self.check_text_file()
             self.update()
             await self.load_audio()
 
     async def check_text_file(self):
-        print(self.speech_file)
-        self.text_file = os.path.splitext(self.speech_file)[0]+".srt"
+        print(f'Speech file = {self.speech_file}')
+        #self.text_file = os.path.splitext(self.speech_file)[0]+".srt"
         tmp_file = os.path.splitext(self.speech_file)[0]
         if os.path.exists(tmp_file+'.srt'):
             self.text_file = tmp_file+'.srt'
@@ -501,8 +523,12 @@ class AudioSubPlayer(ft.UserControl):
             self.text_file = tmp_file+'.txt'
             self.text_file_name.value = os.path.basename(self.text_file)
         else:
-            self.text_file, self.text_file_name = 'No Text File.'
-        print(self.text_file)
+            self.text_file = self.text_file_name.value = 'No Text File.'
+            self.save_button.disabled=True
+            self.export_button.disabled=True
+            self.sub_scroller_sw.disabled=True
+        #self.text_file_name.update()
+        print(f'Subtitle file = {self.text_file_name.value}')
 
     async def save_or_cancel(self):
         self.page.dialog = self.save_or_cancel_dialog
@@ -617,9 +643,8 @@ class AudioSubPlayer(ft.UserControl):
                         srt.write(f'{start} --> {end}\n')
                     elif j % 4 == 3:
                         srt.write('%s\n\n' % i[j]) 
-        self.notification_bar.content=ft.Text(f'Saved {os.path.basename(save_file_name)}.', color=ft.colors.LIGHT_BLUE_ACCENT_400)
-        self.notification_bar.bgcolor=ft.colors.BLUE_GREY_700
-        self.notification_bar.open=True
+        notification = f'Subtitle saved as an SRT file: {os.path.basename(save_file_name)}'
+        await self.open_notification_bar(notification)
         self.update()
 
     # Save as .txt file
@@ -629,10 +654,21 @@ class AudioSubPlayer(ft.UserControl):
                 for j in range(len(i)):
                     if j % 4 == 3:
                         txt.write('%s\n' % i[j]) 
-        self.notification_bar.content=ft.Text(f'Saved {os.path.basename(save_file_name)}.', color=ft.colors.LIGHT_BLUE_ACCENT_400)
-        self.notification_bar.bgcolor=ft.colors.BLUE_GREY_700
-        self.notification_bar.open=True
+        #await self.open_notification_bar(save_file_name, 'TXT')
+        notification = f'Subtitle saved as a TXT file: {os.path.basename(save_file_name)}'
+        await self.open_notification_bar(notification)
         self.update()
+    
+    async def open_notification_bar(self, notification, type='normal'):
+        if type == 'normal':
+            self.notification_bar.content=ft.Text(notification, color=ft.colors.LIGHT_BLUE_ACCENT_400)
+            self.notification_bar.bgcolor=ft.colors.BLUE_GREY_700
+        elif type == 'error':
+            self.notification_bar.content=ft.Text(notification, color=ft.colors.RED)
+            self.notification_bar.bgcolor=ft.colors.YELLOW
+            self.notification_bar.duration=4000
+        self.notification_bar.open=True 
+        self.notification_bar.update()
 
     async def export_csv(self, e):
         pass
@@ -691,6 +727,11 @@ class AudioSubPlayer(ft.UserControl):
                 #expand=False,
                 padding=5,
             ),
+            ft.Row(controls=[
+                ft.Text('Copyright (c) Peddals.com', text_align=ft.CrossAxisAlignment.START), 
+                ft.Image(src='in_app_logo_small.png'),
+            ],alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
             ft.Container(content=
                 self.notification_bar)
             ],
@@ -702,12 +743,14 @@ class AudioSubPlayer(ft.UserControl):
 async def main(page: ft.Page):
     page.title = 'Speech + Subtitle Player'
     page.window_height = 800
+    #page.theme_mode=ft.ThemeMode.DARK
+    page.theme_mode=ft.ThemeMode.SYSTEM
     page.update()
 
     async def load_audio():
         page.overlay.append(app.audio1)
         print(f'app.audio1 = {app.audio1}')
-        print('Load audio file and update page.')
+        print('Load audio file by a function outside of AudioSubPlayer class.')
         page.update()
 
     app = AudioSubPlayer(speech_dir, speech_file, text_dir, text_file, load_audio)
