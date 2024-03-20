@@ -6,7 +6,17 @@ import flet as ft
 import os
 import numpy as np
 from datetime import datetime
-
+'''
+speech_dir= "Speech_and_Text/"
+speech_file = ''
+text_dir = "Speech_and_Text/"
+text_file = ''
+if speech_file != '':
+    text_file = os.path.splitext(os.path.basename(speech_file))[0]+".txt"
+    print(text_dir+text_file)
+if text_dir+text_file:
+    print("File exists.")
+'''
 def ms_to_hhmmssnnn(milliseconds):
     seconds = int(milliseconds / 1000)
     h = seconds // 3600
@@ -466,14 +476,30 @@ class AudioSubPlayer(ft.UserControl):
         if e.files:
             print(f'e.files = {e.files}')
             self.speech_file_name.value = ''.join(map(lambda f: f.name, e.files))
-            self.speech_file = ''.join(map(lambda f: f.path, e.files))
+            print(f'self.speech_file_name.value = {self.speech_file_name.value}')
+            #self.speech_file = ''.join(map(lambda f: f.path, e.files))
+            self.speech_file = self.speech_file_name.value
+            print(f'self.speech_file = {self.speech_file}')
             print(f'Full path= {self.speech_file}')
-            self.audio1.src = self.speech_file
-            self.base_dir.value=f"Directory: {os.path.dirname(self.speech_file)}"
-            await self.check_text_file()
+            self.audio1.src = 'uploads/'+self.speech_file
+            #self.base_dir.value=f"Directory: {os.path.dirname(self.speech_file)}"
+            await self.upload_speech_file()
+            #await self.check_text_file()
             self.update()
             await self.load_audio()
     
+    async def upload_speech_file(self):
+        upload_file = []
+        if self.pick_speech_file_dialog.result is not None and self.pick_speech_file_dialog.result.files is not None:
+            for f in self.pick_speech_file_dialog.result.files:
+                upload_file.append(
+                    ft.FilePickerUploadFile(
+                        f.name,
+                        upload_url=self.page.get_upload_url(f.name, 600),
+                )
+            )
+            self.pick_speech_file_dialog.upload(upload_file)
+
     async def pick_text_file(self, e):
         if self.isPlaying == True:
             await self.play_button_clicked(e)
@@ -496,6 +522,7 @@ class AudioSubPlayer(ft.UserControl):
 
     async def check_text_file(self):
         print(f'Speech file = {self.speech_file}')
+        tmp_file = os.path.splitext(self.speech_file)[0]
         tmp_file = os.path.splitext(self.speech_file)[0]
         if os.path.exists(tmp_file+'.srt'):
             self.text_file = tmp_file+'.srt'
@@ -713,5 +740,5 @@ async def main(page: ft.Page):
     page.update()
 
 
-ft.app(target=main, assets_dir="assets")
+ft.app(main, view=ft.AppView.WEB_BROWSER, port=8000, assets_dir='assets', upload_dir='uploads')
 #ft.app(target=main)

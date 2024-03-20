@@ -1,5 +1,6 @@
 .DS_Store
 **/__pycache__/**
-/build/
+**/build/**
 /examples/
 **/Speech_and_Text/**
+**/uploads/**
