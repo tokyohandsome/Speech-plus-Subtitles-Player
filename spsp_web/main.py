@@ -183,12 +183,6 @@ class AudioSubPlayer(ft.UserControl):
         self.position = 0
         self.duration = 0
         self.isPlaying = False
-        '''
-        self.speech_dir = speech_dir
-        self.speech_file = speech_file
-        self.text_dir = text_dir
-        self.text_file = text_file
-        '''
         self.load_audio = load_audio
 
         #self.base_dir = ft.Text(value=f"Base Directory: {os.path.dirname(self.speech_file)}")
@@ -206,7 +200,7 @@ class AudioSubPlayer(ft.UserControl):
             text = "Play",
             autofocus=True,
             on_click=self.play_button_clicked,
-            disabled=True,
+            #disabled=True,
         )
 
         self.position_text = ft.Text(value='Current position')
@@ -330,6 +324,7 @@ class AudioSubPlayer(ft.UserControl):
     async def loaded(self, e):
         self.audio_slider.max = int(await self.audio1.get_duration_async())
         self.duration_text.value = f'{ms_to_hhmmssnnn(self.audio_slider.max)}'
+        print(f'Duration: {self.duration_text.value}')
         self.audio_slider.divisions = self.audio_slider.max//60
         if self.text_file != 'No Text File.':
             self.subtitles = create_subtitles(self.text_file)
@@ -396,7 +391,7 @@ class AudioSubPlayer(ft.UserControl):
 
     async def slider_changed(self, e):
         self.audio1.seek(int(self.audio_slider.value))
-        print(int(self.audio_slider.value))
+        print(f'Slider value = {int(self.audio_slider.value)}')
         self.update()
 
     async def play_button_clicked(self, e):
@@ -478,13 +473,13 @@ class AudioSubPlayer(ft.UserControl):
             self.speech_file_name.value = ''.join(map(lambda f: f.name, e.files))
             print(f'self.speech_file_name.value = {self.speech_file_name.value}')
             #self.speech_file = ''.join(map(lambda f: f.path, e.files))
-            self.speech_file = self.speech_file_name.value
+            self.speech_file = '/uploads/'+self.speech_file_name.value
             print(f'self.speech_file = {self.speech_file}')
             print(f'Full path= {self.speech_file}')
-            self.audio1.src = 'uploads/'+self.speech_file
+            self.audio1.src = self.speech_file
             #self.base_dir.value=f"Directory: {os.path.dirname(self.speech_file)}"
             await self.upload_speech_file()
-            #await self.check_text_file()
+            await self.check_text_file()
             self.update()
             await self.load_audio()
     
@@ -499,6 +494,18 @@ class AudioSubPlayer(ft.UserControl):
                 )
             )
             self.pick_speech_file_dialog.upload(upload_file)
+
+    async def upload_text_file(self):
+        upload_file = []
+        if self.pick_text_file_dialog.result is not None and self.pick_text_file_dialog.result.files is not None:
+            for f in self.pick_text_file_dialog.result.files:
+                upload_file.append(
+                    ft.FilePickerUploadFile(
+                        f.name,
+                        upload_url=self.page.get_upload_url(f.name, 600),
+                )
+            )
+            self.pick_text_file_dialog.upload(upload_file)
 
     async def pick_text_file(self, e):
         if self.isPlaying == True:
@@ -515,8 +522,10 @@ class AudioSubPlayer(ft.UserControl):
             print(f'e.files = {e.files}')
             self.text_file_name.value = ''.join(map(lambda f: f.name, e.files))
             print(f'File name= {self.text_file}, type = {type(self.text_file)}')
-            self.text_file = ''.join(map(lambda f: f.path, e.files))
+            #self.text_file = ''.join(map(lambda f: f.path, e.files))
+            self.text_file = '/uploads/'+self.text_file_name.value
             print(f'Full path= {self.text_file}')
+            self.upload_text_file()
             self.update()
             await self.load_audio()
 
@@ -730,15 +739,13 @@ async def main(page: ft.Page):
         print('Load audio file by a function outside of AudioSubPlayer class.')
         page.update()
 
-    #app = AudioSubPlayer(speech_dir, speech_file, text_dir, text_file, load_audio)
     app = AudioSubPlayer(load_audio)
     
     page.add(app)
     page.overlay.extend([app.pick_speech_file_dialog, app.pick_text_file_dialog, app.save_file_dialog, 
                          app.export_as_srt_dialog, app.export_as_txt_dialog])
-    #page.overlay.append(app.audio1)
     page.update()
 
 
-ft.app(main, view=ft.AppView.WEB_BROWSER, port=8000, assets_dir='assets', upload_dir='uploads')
+ft.app(main, view=ft.AppView.WEB_BROWSER, port=8000, assets_dir='assets', upload_dir='assets/uploads')
 #ft.app(target=main)

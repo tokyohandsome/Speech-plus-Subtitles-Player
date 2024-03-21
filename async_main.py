@@ -288,7 +288,7 @@ class AudioSubPlayer(ft.UserControl):
         self.save_button = ft.ElevatedButton(
             text='Save', 
             icon=ft.icons.SAVE_OUTLINED, 
-            tooltip='Update current Text/SRT file',
+            tooltip='Update current SRT/TXT file.',
             disabled=True,
             on_click=self.save_clicked
             )
@@ -299,6 +299,22 @@ class AudioSubPlayer(ft.UserControl):
             on_click=self.open_export_dialog,
             disabled=True,
             )
+        
+        self.export_as_srt_button = ft.ElevatedButton(
+            text = 'SRT',
+            icon=ft.icons.SAVE_ALT,
+            on_click=self.export_as_srt,
+            disabled=True,
+            tooltip='Export as SRT file.'
+        )
+
+        self.export_as_txt_button = ft.ElevatedButton(
+            text = 'TXT',
+            icon=ft.icons.SAVE_ALT,
+            on_click=self.export_as_txt,
+            disabled=True,
+            tooltip='Export as TXT file.'
+        )
 
         self.save_or_cancel_dialog = ft.AlertDialog(
             modal=True,
@@ -326,9 +342,13 @@ class AudioSubPlayer(ft.UserControl):
             self.save_button.text = 'Save'
             self.save_button.disabled=False
             self.export_button.disabled=False
+            self.export_as_srt_button.disabled=False
+            self.export_as_txt_button.disabled=False
         else:
             self.save_button.disabled=True
             self.export_button.disabled=True
+            self.export_as_srt_button.disabled=True
+            self.export_as_txt_button.disabled=True
             self.subtitles = []
         self.play_button.disabled=False
         self.play_button.update()
@@ -354,6 +374,7 @@ class AudioSubPlayer(ft.UserControl):
                     self.sub_scroller_sw.value=False
                     self.sub_scroller_sw.disabled=True
                     self.export_dialog.actions[0].disabled=True
+                    self.export_as_srt_button.disabled=True
                 # .srt file
                 else:
                     self.sub_scroller_sw.value=True
@@ -450,7 +471,7 @@ class AudioSubPlayer(ft.UserControl):
             await self.play_button_clicked(e)
         if self.save_button.text == '*Save':
             print('Save is not done.')
-            self.save_or_cancel()
+            await self.save_or_cancel()
         else:
             await self.pick_speech_file()
     
@@ -522,7 +543,7 @@ class AudioSubPlayer(ft.UserControl):
     async def open_without_save(self, e):
         self.save_or_cancel_dialog.open = False
         self.page.update()
-        self.pick_speech_file()
+        await self.pick_speech_file()
 
     # Save file dialog
     async def save_clicked(self, e):
@@ -552,8 +573,8 @@ class AudioSubPlayer(ft.UserControl):
         )
 
     async def export_as_srt_result(self, e: ft.FilePicker.result):
-        self.export_dialog.open = False
-        self.export_dialog.update()
+        #self.export_dialog.open = False
+        #self.export_dialog.update()
         if e.path:
             await self.save_as_srt(e.path)
             
@@ -571,8 +592,8 @@ class AudioSubPlayer(ft.UserControl):
         )
 
     async def export_as_txt_result(self, e: ft.FilePicker.result):
-        self.export_dialog.open = False
-        self.export_dialog.update()
+        #self.export_dialog.open = False
+        #self.export_dialog.update()
         #self.page.update()
         #self.update()
         if e.path:
@@ -652,7 +673,9 @@ class AudioSubPlayer(ft.UserControl):
                         self.text_file_button,
                         self.text_file_name,
                         self.save_button,
-                        self.export_button,
+                        #self.export_button,
+                        self.export_as_srt_button,
+                        self.export_as_txt_button,
                     ]),
                     self.audio_slider,
                     ft.Row([
@@ -678,7 +701,7 @@ class AudioSubPlayer(ft.UserControl):
                 padding=5,
             ),
             ft.Row(controls=[
-                ft.Text('Copyright (c) Peddals.com', text_align=ft.CrossAxisAlignment.START), 
+                ft.Text('© 2024 Peddals.com', text_align=ft.CrossAxisAlignment.START), 
                 ft.Image(src='in_app_logo_small.png'),
             ],alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
