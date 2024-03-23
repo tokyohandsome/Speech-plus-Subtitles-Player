@@ -4,7 +4,7 @@ Supported mp3 sampling rate = 44.1KHz
 
 import flet as ft
 import os
-import numpy as np
+#import numpy as np
 from datetime import datetime
 '''
 speech_dir= "Speech_and_Text/"

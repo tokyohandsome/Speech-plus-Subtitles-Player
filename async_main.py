@@ -194,7 +194,7 @@ class AudioSubPlayer(ft.UserControl):
         self.play_button = ft.ElevatedButton(
             icon=ft.icons.PLAY_ARROW,
             text = "Play",
-            autofocus=True,
+            #autofocus=True,
             on_click=self.play_button_clicked,
             disabled=True,
         )
@@ -247,7 +247,7 @@ class AudioSubPlayer(ft.UserControl):
         self.speech_file_button = ft.ElevatedButton(
             text='Open Speech File', 
             icon=ft.icons.RECORD_VOICE_OVER_OUTLINED, 
-            autofocus=True,
+            #autofocus=True,
             width=210,
             on_click=self.pre_pick_speech_file,
         )
@@ -259,7 +259,7 @@ class AudioSubPlayer(ft.UserControl):
         self.text_file_button = ft.ElevatedButton(
             text='Open SRT/TXT File',
             icon=ft.icons.TEXT_SNIPPET_OUTLINED,
-            on_click=self.pick_text_file,
+            on_click=self.pre_pick_text_file,
             disabled=True,
             width=210,
         )
@@ -316,17 +316,27 @@ class AudioSubPlayer(ft.UserControl):
             tooltip='Export as TXT file.'
         )
 
-        self.save_or_cancel_dialog = ft.AlertDialog(
+        self.speech_save_or_cancel_dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text('Change not saved.'),
             content=ft.Text('Do you want to discard the change?'),
             actions=[
                 #ft.TextButton('Save', on_click=self.save_then_open, tooltip='Save then open another file.'),
-                ft.TextButton('Open without save', on_click=self.open_without_save, tooltip='Change will be lost.'),
-                ft.TextButton('Cancel', on_click=self.close_save_or_cancel_dialog),
+                ft.TextButton('Open without save', on_click=self.open_speech_without_save, tooltip='Change will be lost.'),
+                ft.TextButton('Cancel', on_click=self.close_speech_save_or_cancel_dialog),
             ]
         )
 
+        self.text_save_or_cancel_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text('Change not saved.'),
+            content=ft.Text('Do you want to discard the change?'),
+            actions=[
+                #ft.TextButton('Save', on_click=self.save_then_open, tooltip='Save then open another file.'),
+                ft.TextButton('Open without save', on_click=self.open_text_without_save, tooltip='Change will be lost.'),
+                ft.TextButton('Cancel', on_click=self.close_text_save_or_cancel_dialog),
+            ]
+        )
         self.notification_bar=ft.SnackBar(
             content=ft.Text('Speech + Subtitle Player'),
             duration=2000,
@@ -350,13 +360,14 @@ class AudioSubPlayer(ft.UserControl):
             self.export_as_srt_button.disabled=True
             self.export_as_txt_button.disabled=True
             self.subtitles = []
+        self.speech_file_button.autofocus=False
+        self.speech_file_button.update()
         self.play_button.disabled=False
+        self.play_button.focus()
+        self.play_button.autofocus=True
         self.play_button.update()
         self.rewind_button.disabled=False
         self.text_file_button.disabled=False
-        self.speech_file_button.autofocus=False
-        self.speech_file_button.update()
-        self.play_button.focus()
         
         # Disable export as srt if subtitle is text file which does not have timestamps.
         #self.export_dialog.actions[0].disabled=os.path.splitext(self.text_file)[1]=='.txt'
@@ -471,7 +482,7 @@ class AudioSubPlayer(ft.UserControl):
             await self.play_button_clicked(e)
         if self.save_button.text == '*Save':
             print('Save is not done.')
-            await self.save_or_cancel()
+            await self.speech_save_or_cancel()
         else:
             await self.pick_speech_file()
     
@@ -495,9 +506,16 @@ class AudioSubPlayer(ft.UserControl):
             self.update()
             await self.load_audio()
     
-    async def pick_text_file(self, e):
+    async def pre_pick_text_file(self, e):
         if self.isPlaying == True:
             await self.play_button_clicked(e)
+        if self.save_button.text == '*Save':
+            print('Save is not done.')
+            await self.text_save_or_cancel()
+        else:
+            await self.pick_text_file()
+    
+    async def pick_text_file(self):
         self.pick_text_file_dialog.pick_files(
             dialog_title='Select a subtitle file',
             allow_multiple=False,
@@ -531,19 +549,33 @@ class AudioSubPlayer(ft.UserControl):
             self.sub_scroller_sw.disabled=True
         print(f'Subtitle file = {self.text_file_name.value}')
 
-    async def save_or_cancel(self):
-        self.page.dialog = self.save_or_cancel_dialog
-        self.save_or_cancel_dialog.open = True
+    async def speech_save_or_cancel(self):
+        self.page.dialog = self.speech_save_or_cancel_dialog
+        self.speech_save_or_cancel_dialog.open = True
         self.page.update()
     
-    async def close_save_or_cancel_dialog(self, e):
-        self.save_or_cancel_dialog.open = False
+    async def close_speech_save_or_cancel_dialog(self, e):
+        self.speech_save_or_cancel_dialog.open = False
         self.page.update()
     
-    async def open_without_save(self, e):
-        self.save_or_cancel_dialog.open = False
+    async def open_speech_without_save(self, e):
+        self.speech_save_or_cancel_dialog.open = False
         self.page.update()
         await self.pick_speech_file()
+
+    async def text_save_or_cancel(self):
+        self.page.dialog = self.text_save_or_cancel_dialog
+        self.text_save_or_cancel_dialog.open = True
+        self.page.update()
+        
+    async def open_text_without_save(self, e):
+        self.text_save_or_cancel_dialog.open = False
+        self.page.update()
+        await self.pick_text_file()
+    
+    async def close_text_save_or_cancel_dialog(self, e):
+        self.text_save_or_cancel_dialog.open = False
+        self.page.update()
 
     # Save file dialog
     async def save_clicked(self, e):
