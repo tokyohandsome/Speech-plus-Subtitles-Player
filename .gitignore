@@ -3,5 +3,6 @@
 **/build/**
 /examples/
 **/Speech_and_Text/**
+/assets/Speech_and_Text/**
 **/uploads/**
 **/test/**
