@@ -71,6 +71,7 @@ def create_subtitles(file):
                     sub = sub + [line]
                     counter += 1
                 else:
+                    # Skip if text is blank. Avoid Whisper's known issue.
                     if sub[3] =='':
                         sub = []
                         counter += 1
@@ -81,30 +82,41 @@ def create_subtitles(file):
                     index += 1
     return(subs)
 
-# Create a button of each line of subtitles
+# Create button of subtitle text.
 class SubButton(ft.UserControl):
     def __init__(self, index, start_time, end_time, text, sub_time_clicked, play_button, save_button, subtitles):
         super().__init__()
+        # Parameter of each subtitle.
         self.index = index
         self.start_time = start_time
         self.end_time = end_time
         self.text = text
+        # Passed methods and controls to call and update.
         self.sub_time_clicked = sub_time_clicked
         self.play_button = play_button
         self.save_button = save_button
         self.subtitles = subtitles
     
+    # === BUILD METHOD ===
     def build(self):
+        # Start time button
         self.display_start_time = ft.TextButton(text=f"{ms_to_hhmmssnnn(int(self.start_time))}",
-                                           disabled=(self.start_time==201355555),
-                                           key=self.index,
-                                           width=130,
-                                           on_click=self.jump_clicked,)
+                                            # Disable jump button if loaded text is TXT, no timestamp.
+                                            disabled=(self.start_time==201355555),
+                                            # When enabled, jump to the key when clicked.
+                                            key=self.index,
+                                            width=130,
+                                            on_click=self.jump_clicked,)
+
+        # Subtitle text button in display view. Click to edit.
         self.display_text= ft.TextButton(text=f"{self.text}", 
                                          on_click=self.edit_clicked, 
                                          tooltip='Click to edit')
+
+        # Placeholder of subtitle text button in edit view.
         self.edit_text = ft.TextField(expand=1)
 
+        # Put controls together. Left item is the key=index.
         self.display_view = ft.Row(
             alignment=ft.MainAxisAlignment.START,
             controls=[
@@ -114,15 +126,17 @@ class SubButton(ft.UserControl):
             ]
         )
 
+        # Change tool tip of start time button which is only clickable for SRT.
         if self.start_time==201355555:
             self.display_start_time.tooltip='Jump not available'
         else:
             self.display_start_time.tooltip='Click to jump here'
         
+        # Subtitle edit view visible when clicked.
         self.edit_view = ft.Row(
             visible=False,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            #alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            #vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 self.edit_text,
                 ft.IconButton(
@@ -140,6 +154,8 @@ class SubButton(ft.UserControl):
         return ft.Column(controls=[self.display_view, self.edit_view])
 
     # === Methods ===
+
+    # Opens editable text button with subtitle. Hit enter key or click checkmark to call save_clicked.
     async def edit_clicked(self, e):
         self.edit_text.value = self.display_text.text
         self.edit_text.focus()
@@ -148,6 +164,7 @@ class SubButton(ft.UserControl):
         self.edit_text.on_submit = self.save_clicked
         self.update()
 
+    # Updates edited subtitle, change save button, revert focus back to Play button.
     async def save_clicked(self, e):
         self.display_text.text= self.edit_text.value
         self.display_view.visible = True
@@ -158,15 +175,18 @@ class SubButton(ft.UserControl):
         self.save_button.update()
         self.update()
 
+    # Closes if edit canceled.
     async def cancel_clicked(self, e):
         self.display_view.visible = True
         self.edit_view.visible = False
         self.play_button.focus()
         self.update()
 
+    # When timestamp clicked calls AudioSubPlayer.sub_time_clicked to jump to button position.
     async def jump_clicked(self, e):
         await self.sub_time_clicked(self.start_time)
 
+# Main class of the app
 class AudioSubPlayer(ft.UserControl):
     def __init__(self, load_audio):
         super().__init__()
