@@ -1,7 +1,3 @@
-'''
-Note: Supported mp3 sample rate by macOS = 44.1KHz
-'''
-
 import flet as ft
 import os
 import numpy as np
