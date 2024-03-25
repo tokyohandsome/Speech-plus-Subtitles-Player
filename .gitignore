@@ -6,3 +6,4 @@
 /assets/Speech_and_Text/**
 **/uploads/**
 /test/*
+/test/*.py
