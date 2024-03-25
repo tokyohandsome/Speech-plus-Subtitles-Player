@@ -790,7 +790,7 @@ class AudioSubPlayer(ft.UserControl):
 
 # Main function that builds window and adds page. Also, adds audio file and dialogs that are invisible as overlay.
 async def main(page: ft.Page):
-    page.title = 'Speech + Subtitle Player'
+    page.title = 'Speech + Subtitles Player'
     page.window_height = 800
     page.theme_mode=ft.ThemeMode.SYSTEM
     page.update()
