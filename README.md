@@ -2,7 +2,7 @@
 
 With this GUI app, you can easily edit subtitles by playing speech audio file and SRT text in sync.
 
-<img width="912" alt="screenshot" src="https://github.com/tokyohandsome/Speech-plus-Subtitles-Player/assets/34906599/51657b32-34de-4e6f-b69b-c5a35c321aa4">
+<img width="1084" alt="screenshot_en" src="https://github.com/tokyohandsome/Speech-plus-Subtitles-Player/assets/34906599/755220b2-d7d7-4f95-bafa-b5a5ceb1b500">
 
 Use OpenAI's Whisper or similar speech-to-text software to generate SRT file which will be loaded when you load an audio file.  
 Click on subtitles text to edit it.  
