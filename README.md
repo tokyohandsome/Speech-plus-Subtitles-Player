@@ -23,7 +23,7 @@ python main.py
 
 Known issues/limitations:
 - Move or resize of window is laggy when the number of subtitles (=buttons) is big.
-- Built app by `flet build macos` crashes as Numpy cannot be included with the current Flet version. Comment `import numpy` to build but auto scroll/slider won't work.
+- Built app by `flet build macos --include-packages flet_audio` crashes as Numpy cannot be included with the current Flet version. Comment `import numpy` to build but auto scroll/slider won't work.
 - Sometimes Open/Export dialogs freezes and you have to quit the app. Save frequently.
 - Supported MP3 sample rate by macOS is 44.1KHz.
 - Add audio file extension to the `pick_speech_file` method if it's grayed out.
