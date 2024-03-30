@@ -20,11 +20,12 @@ How to run the app:
 python main.py
 ```
 
-How to guild as a mac app:
+How to build as a mac app:
 ```
 flet build macos --build-version "1.0.1" --copyright "Copyright (c) 2024 Peddals.com" --product "Speech+SubtitlesPlayer" --include-packages flet_audio
 ```
 Plese report if building as Windows or Linux app won't work.
+
 
 Known issues/limitations:
 - Move or resize of window is laggy when the number of subtitles (=buttons) is big.
