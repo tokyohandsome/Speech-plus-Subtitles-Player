@@ -1,6 +1,6 @@
 import flet as ft
 import os
-import numpy as np
+#import numpy as np
 from datetime import datetime
 
 # Convert milliseconds to hh:mm:ss,nnn
@@ -514,10 +514,12 @@ class AudioSubPlayer(ft.UserControl):
         self.update()
     
     # Called when slider position is changed and scroll to subtitle with the nearest end_time.
-    # Numpy is only used in this method.
     async def scroll_to(self, e):
         end_time = [item[2] for item in self.subtitles]
-        index = np.argmin(np.abs(np.array(end_time) - e))
+        # Numpy is only used below:
+        #index = np.argmin(np.abs(np.array(end_time) - e))
+        # Below works without using Numpy:
+        index = min(range(len(end_time)), key=lambda i: abs(end_time[i]-e))
         key=str(self.subtitles[index][0])
         self.subs_view.scroll_to(key=key, duration =1000)
         self.update()
