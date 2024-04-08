@@ -800,8 +800,6 @@ async def main(page: ft.Page):
     # Appends audio as an overlay to the page.
     async def load_audio():
         page.overlay.append(app.audio1)
-        #print(f'app.audio1 = {app.audio1}')
-        #print('Load audio file by a function outside of AudioSubPlayer class.')
         page.update()
 
     # Creates an instance of AudioSubPlayer class. Passes load_audio for the instance to append audio to the page. 
