@@ -378,7 +378,7 @@ class AudioSubPlayer(ft.UserControl):
     async def loaded(self, e):
         self.audio_slider.max = int(await self.audio1.get_duration_async())
         self.duration_text.value = f'{ms_to_hhmmssnnn(self.audio_slider.max)}'
-        self.audio_slider.divisions = self.audio_slider.max//60
+        self.audio_slider.divisions = self.audio_slider.max//1000
         # Enables buttons if associated text file exists.
         if self.text_file != 'No Text File.':
             # Call function to create the list of subtitles, self.subtitles.
