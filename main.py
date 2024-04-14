@@ -494,7 +494,7 @@ class AudioSubPlayer(ft.UserControl):
         else:
             self.audio_slider.value -= 5*1000
         self.audio1.seek(int(self.audio_slider.value))
-        print(int(self.audio_slider.value))
+        #print(int(self.audio_slider.value))
         self.update()
     
     # Switch playback rate between normal and 1.5x faster.
@@ -503,7 +503,7 @@ class AudioSubPlayer(ft.UserControl):
             self.audio1.playback_rate = 1.5
         else:
             self.audio1.playback_rate = 1
-        print(f'Playback rate: {self.audio1.playback_rate}')
+        #print(f'Playback rate: {self.audio1.playback_rate}')
         await self.audio1.update_async()
 
     # When the timestamp is clicked, jump to its position and play if not playing.
