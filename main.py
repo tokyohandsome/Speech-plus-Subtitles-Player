@@ -712,7 +712,7 @@ class AudioSubPlayer(ft.UserControl):
         await self.open_notification_bar(notification)
         self.update()
     
-    # Opens notification bar with given text. If type is 'error', shows message longer with highlight.
+    # Opens notification bar with given text. If type is 'error', shows message longer with caution color.
     async def open_notification_bar(self, notification, type='normal'):
         if type == 'normal':
             self.notification_bar.content=ft.Text(notification, color=ft.colors.LIGHT_BLUE_ACCENT_400)
@@ -724,7 +724,7 @@ class AudioSubPlayer(ft.UserControl):
         self.notification_bar.open=True 
         self.notification_bar.update()
 
-    # Placeholder for export as CSV.
+    # Placeholder for export as CSV (not in use).
     async def export_csv(self, e):
         pass
 
