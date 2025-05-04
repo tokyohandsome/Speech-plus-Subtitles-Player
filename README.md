@@ -13,7 +13,7 @@ Note: This app was developed and only tested on macOS Sonoma 14.3 running on Mac
 
 Requirements:
 - Python >= 3.8
-- Flet >= 0.21.0 (`pip install flet`)
+- Flet == 0.21.2 (`pip install flet==0.21.2`)
 
 How to run the app:
 ```
